@@ -1,0 +1,7 @@
+Flask-SQLAlchemy
+Flask-Security
+Flask-Login
+flask-discoverer
+requests
+alembic
+sqlalchemy-utils
