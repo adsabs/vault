@@ -7,7 +7,7 @@ from flask.ext.login import LoginManager
 # for running things in wsgi container; use
 # wsgi.py from the rootdir
 
-def create_app():
+def create_app(**config):
     
     opath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     if opath not in sys.path:
@@ -20,6 +20,9 @@ def create_app():
       app.config.from_pyfile('local_config.py')
     except IOError:
       pass
+  
+    if config:
+        app.config.update(config)
     
     login_manager = LoginManager()
     login_manager.init_app(app)

@@ -7,3 +7,4 @@ SQLALCHEMY_ECHO = False
 
 # location of the remote solr-microservice
 SOLR_QUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/query'
+SOLR_BIGQUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/bigquery'
