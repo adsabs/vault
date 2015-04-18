@@ -15,8 +15,8 @@ from models import Query, db
 storage = Blueprint('storage', __name__)
 
 
-@storage.route('/query', methods=['GET', 'POST'])
-def query(qid=None):
+@storage.route('/query', defaults={'queryid': None}, methods=['GET', 'POST'])
+def query(queryid):
     '''Stores/retrieves the montysolr query; it can receive data in urlencoded
     format or as application/json encoded data. In the second case, you can 
     pass 'bigquery' together with the 'query' like so:
@@ -27,7 +27,7 @@ def query(qid=None):
     }
     '''
     
-    if request.method == 'GET' and qid:
+    if request.method == 'GET' and queryid:
         q = Query.first(qid=qid)
         if not q:
             return json.dumps({msg: 'Query not found: ' + qid}), 404
