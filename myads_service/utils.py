@@ -8,13 +8,15 @@ def make_solr_request(query, bigquery=None, headers=None):
     # I'm making a simplification here; sending just one content stream
     # it would be possible to save/send multiple content streams but
     # I decided that would only create confusion; so only one is allowed
+    if isinstance(query, basestring):
+        query = urlparse.parse_qs(query)
     
     if bigquery:
         headers = dict(headers)
         headers['content-type'] = 'big-query/csv'
         return requests.post(current_app.config['SOLR_BIGQUERY_ENDPOINT'], params=query, headers=headers, data=bigquery)
     else:
-        return requests.post(current_app.config['SOLR_QUERY_ENDPOINT'], data=query, headers=headers) 
+        return requests.get(current_app.config['SOLR_QUERY_ENDPOINT'], params=query, headers=headers) 
 
 
 def cleanup_payload(payload):
@@ -26,8 +28,11 @@ def cleanup_payload(payload):
     else:
         pointer = payload
 
+    if (isinstance(pointer, list)):
+        pointer = pointer[0]
     if (isinstance(pointer, basestring)):
         pointer = urlparse.parse_qs(pointer)
+    
         
     # clean up
     for k,v in pointer.items():
@@ -64,10 +69,11 @@ def check_request(request):
         payload = dict(request.args)
         payload.update(dict(request.form))
     
+    new_headers = {}
     if headers['Authorization']:
-        headers['X-Forwarded-Authorization'] = headers['Authorization']
-    headers['Authorization'] = 'Bearer:' + current_app.config['OAUTH_CLIENT_TOKEN']
-    headers['User'] = headers.get('User', '0') # User ID
+        new_headers['X-Forwarded-Authorization'] = headers['Authorization']
+    new_headers['Authorization'] = 'Bearer:' + current_app.config['OAUTH_CLIENT_TOKEN']
+    new_headers['User'] = headers.get('User', '0') # User ID
     
-    return (payload, headers)
+    return (payload, new_headers)
 

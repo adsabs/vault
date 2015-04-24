@@ -38,7 +38,7 @@ class TestServices(TestCase):
         '''Tests the ability to store queries'''
         
         httpretty.register_uri(
-            httpretty.POST, self.app.config.get('SOLR_QUERY_ENDPOINT'),
+            httpretty.GET, self.app.config.get('SOLR_QUERY_ENDPOINT'),
             content_type='application/json',
             status=200,
             body="""{

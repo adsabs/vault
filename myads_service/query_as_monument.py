@@ -31,4 +31,4 @@ def query2svg(queryid):
     if not q:
         return '<svg xmlns="http://www.w3.org/2000/svg"></svg>', 404, {'Content-Type': "image/svg+xml"}
     
-    return SVG_TMPL % {'key': 'citations', 'value': q.numfound}, 200, {'Content-Type': "image/svg+xml"}
+    return SVG_TMPL % {'key': 'ADS query', 'value': q.numfound}, 200, {'Content-Type': "image/svg+xml"}
