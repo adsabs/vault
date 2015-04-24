@@ -117,21 +117,21 @@ class TestServices(TestCase):
         
     
     def test_query_utils(self):
-        from myads_service import views
+        from myads_service import utils
         
-        r = views.cleanup_payload({'query': 'q=foo&fq=boo&foo=bar&boo=bar'})
+        r = utils.cleanup_payload({'query': 'q=foo&fq=boo&foo=bar&boo=bar'})
         self.assert_(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
         
-        r = views.cleanup_payload({'query': {'q': 'foo', 'fq': 'boo', 'foo': 'bar', 'boo': 'bar'}})
+        r = utils.cleanup_payload({'query': {'q': 'foo', 'fq': 'boo', 'foo': 'bar', 'boo': 'bar'}})
         self.assert_(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
         
         def test_exc():
-            views.cleanup_payload({'query': {'q': 'foo', 'fq': 'boo', 'foo': 'bar', 'boo': 'bar'},
+            utils.cleanup_payload({'query': {'q': 'foo', 'fq': 'boo', 'foo': 'bar', 'boo': 'bar'},
                                    'bigquery': 'foo\nbar'})
             
         self.assertRaises(Exception, test_exc)
         
-        r = views.cleanup_payload({'query': {'q': 'foo', 'fq': '{!bitset}', 'foo': 'bar', 'boo': 'bar'},
+        r = utils.cleanup_payload({'query': {'q': 'foo', 'fq': '{!bitset}', 'foo': 'bar', 'boo': 'bar'},
                                    'bigquery': 'foo\nbar'})
         self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
         
