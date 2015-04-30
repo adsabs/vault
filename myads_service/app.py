@@ -3,6 +3,7 @@ import os, sys
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.login import LoginManager
+from flask.ext.discoverer import Discoverer
 
 # for running things in wsgi container; use
 # wsgi.py from the rootdir
@@ -66,7 +67,8 @@ def create_app(**config):
     from myads_service import views
     for blueprint in views.blueprints:
         app.register_blueprint(blueprint)
-        
+
+    discoverer = Discoverer(app)        
     return app
 
 if __name__ == '__main__':

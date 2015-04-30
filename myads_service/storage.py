@@ -8,10 +8,11 @@ import urlparse
 from sqlalchemy import exc
 from models import Query, db
 from utils import check_request, cleanup_payload, make_solr_request
-
+from flask.ext.discoverer import advertise
 
 bp = Blueprint('storage', __name__)
 
+@advertise(scopes=['ads:store-query'], rate_limit = [100, 3600*24])
 @bp.route('/query', methods=['POST'])
 @bp.route('/query/<queryid>', methods=['GET'])
 def query(queryid=None):
@@ -74,6 +75,7 @@ def query(queryid=None):
     return json.dumps({'qid': qid}), 200
 
 
+@advertise(scopes=['ads:execute-query'], rate_limit = [1000, 3600*24])
 @bp.route('/execute_query/<queryid>', methods=['GET'])
 def execute_query(queryid):
     '''Allows you to execute stored query'''

@@ -1,6 +1,7 @@
 from flask import Blueprint
 from flask import current_app, request
 from models import Query, db
+from flask.ext.discoverer import advertise
 
 '''
 Blueprint full of exportable queries, constructed
@@ -20,7 +21,7 @@ SVG_TMPL = '''
 <text x="80" y="15" fill="#010101" fill-opacity=".3">%(value)s</text><text x="80" y="14">%(value)s</text></g></svg>
 '''
 
-
+@advertise(scopes=[], rate_limit = [1000000, 3600*24])
 @bp.route('/query2svg/<queryid>', methods=['GET'])
 def query2svg(queryid):
     '''Returns the SVG form of the query - for better performance, will need
