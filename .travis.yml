@@ -1,0 +1,25 @@
+language: python
+
+python:
+  - "2.7"
+
+env:
+  #- REQUIREMENTS=lowest
+  #- REQUIREMENTS=release
+  - REQUIREMENTS=dev
+
+install:
+  - "pip install --upgrade pip  --use-mirrors"
+  - "pip install coveralls pep257 --use-mirrors"
+  - "pip install pytest pytest-pep8 pytest-cov pytest-cache --use-mirrors"
+  - "pip install -r requirements.txt"
+  - "pip install -r $REQUIREMENTS-requirements.txt"
+
+script:
+  - "py.test myads_service"
+
+after_success:
+  - "coveralls"
+
+notifications:
+  email: false
