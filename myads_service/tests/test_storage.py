@@ -21,15 +21,16 @@ class TestServices(TestCase):
     def create_app(self):
         '''Start the wsgi application'''
         a = app.create_app(**{
-               'SQLALCHEMY_DATABASE_URI': 'sqlite://',
-               'SQLALCHEMY_ECHO': False,
+               'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
+               'SQLALCHEMY_BINDS': {'myads': 'sqlite:///'},
+               'SQLALCHEMY_ECHO': True,
                #'DEBUG': True,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,
                #'PRESERVE_CONTEXT_ON_EXCEPTION': True,
                'TRAP_BAD_REQUEST_ERRORS': True
             })
-        db.create_all(app=a)
+        db.create_all(app=a, bind=['myads'])
         return a
 
 
@@ -38,7 +39,7 @@ class TestServices(TestCase):
         '''Tests the ability to store queries'''
         
         httpretty.register_uri(
-            httpretty.GET, self.app.config.get('SOLR_QUERY_ENDPOINT'),
+            httpretty.GET, self.app.config.get('MYADS_SOLR_QUERY_ENDPOINT'),
             content_type='application/json',
             status=200,
             body="""{
@@ -79,7 +80,7 @@ class TestServices(TestCase):
         '''Tests the ability to store bigqueries'''
         
         httpretty.register_uri(
-            httpretty.POST, self.app.config.get('SOLR_BIGQUERY_ENDPOINT'),
+            httpretty.POST, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
             content_type='big-query/csv',
             status=200,
             body="""{

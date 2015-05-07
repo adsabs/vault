@@ -12,6 +12,7 @@ from sqlalchemy.orm import synonym
 db = SQLAlchemy() # must be run in the context of a flask application
 
 class User(UserMixin, db.Model):
+    __bind_key__ = 'myads'
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -30,6 +31,7 @@ class User(UserMixin, db.Model):
 
 
 class Query(db.Model):
+    __bind_key__ = 'myads'
     __tablename__ = 'queries'
 
     id = db.Column(db.Integer, primary_key=True)
