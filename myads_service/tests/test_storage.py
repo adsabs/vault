@@ -136,5 +136,53 @@ class TestServices(TestCase):
                                    'bigquery': 'foo\nbar'})
         self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
         
+    
+    def test_store_data(self):
+        '''Tests the ability to store data'''
+        
+        # wrong request (missing user)
+        r = self.client.get(url_for('storage.store_data'),
+                headers={'Authorization': 'secret'},
+                data=json.dumps({'foo': 'bar'}),
+                content_type='application/json')
+        
+        self.assertStatus(r, 400)
+        
+        # no data
+        r = self.client.get(url_for('storage.store_data'),
+                headers={'Authorization': 'secret', 'User': '1'},
+                data=json.dumps({'foo': 'bar'}),
+                content_type='application/json')
+        
+        self.assertStatus(r, 200)
+        self.assert_(r.json == {}, 'missing empty json response')
+        
+        # try to save something broken (it has to be json)
+        r = self.client.post(url_for('storage.store_data'),
+                headers={'Authorization': 'secret', 'User': '1'},
+                data=json.dumps({'foo': 'bar'})[0:-2],
+                content_type='application/json')
+        
+        self.assertStatus(r, 400)
+        self.assert_(r.json['msg'], 'missing explanation')
+        
+        # save something
+        r = self.client.post(url_for('storage.store_data'),
+                headers={'Authorization': 'secret', 'User': '1'},
+                data=json.dumps({'foo': 'bar'}),
+                content_type='application/json')
+        
+        self.assertStatus(r, 200)
+        self.assert_(r.json['foo'] == 'bar', 'missing echo')
+        
+        # get it back
+        r = self.client.get(url_for('storage.store_data'),
+                headers={'Authorization': 'secret', 'User': '1'},
+                content_type='application/json')
+        
+        self.assertStatus(r, 200)
+        self.assert_(r.json == {'foo': 'bar'}, 'missing data')
+        
+        
 if __name__ == '__main__':
     unittest.main()

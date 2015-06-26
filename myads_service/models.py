@@ -42,4 +42,11 @@ class Query(db.Model):
     numfound = db.Column(db.Integer, default=0)
     category = db.Column(db.String(255), default='')
     query = db.Column(db.BLOB)
-    
+
+
+class UserData(db.Model):
+    __bind_key__ = 'myads'
+    __tablename__ = 'userdata'
+        
+    uid = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.BLOB)
