@@ -1,8 +1,7 @@
 from werkzeug.serving import run_simple
-import os, sys
-from flask import Flask
+import os, sys, inspect
+from flask import Flask, Blueprint
 from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.login import LoginManager
 from flask.ext.discoverer import Discoverer
 
 # for running things in wsgi container; use
@@ -25,8 +24,6 @@ def create_app(**config):
     if config:
         app.config.update(config)
     
-    login_manager = LoginManager()
-    login_manager.init_app(app)
     db = SQLAlchemy(app)
     
     ## pysqlite driver breaks transactions, we have to apply some hacks as per
@@ -48,30 +45,17 @@ def create_app(**config):
             # emit our own BEGIN
             conn.execute("BEGIN EXCLUSIVE")
     
-    @login_manager.request_loader
-    def load_user_from_request(request):
-    
-        user = None
-        
-        # try to login using User header
-        user_key = request.headers.get('User') or 'Anonymous'
-        if user_key:
-            user = User.query.filter_by(key=user_key).first()
-            if user:
-                return user
-            else:
-                # create a new user
-                return User(key=user_key)
-    
-        # finally, return Anonymous
-        return None
-    
+    # Note about imports being here rather than at the top level
+    # I want to enclose the import into the scope of the create_app()
+    # and not advertise any of the views
     from myads_service import views
-    for blueprint in views.blueprints:
-        app.register_blueprint(blueprint)
+    for o in inspect.getmembers(views, predicate=lambda x: inspect.ismodule(x)):
+        for blueprint in inspect.getmembers(o[1], predicate=lambda x: isinstance(x, Blueprint)):
+            app.register_blueprint(blueprint[1])
 
     discoverer = Discoverer(app)        
     return app
+
 
 if __name__ == '__main__':
     run_simple('0.0.0.0', 5000, create_app(), use_reloader=False, use_debugger=False)

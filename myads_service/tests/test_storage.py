@@ -150,7 +150,7 @@ class TestServices(TestCase):
         
         # no data
         r = self.client.get(url_for('storage.store_data'),
-                headers={'Authorization': 'secret', 'User': '1'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
         
@@ -159,7 +159,7 @@ class TestServices(TestCase):
         
         # try to save something broken (it has to be json)
         r = self.client.post(url_for('storage.store_data'),
-                headers={'Authorization': 'secret', 'User': '1'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
                 data=json.dumps({'foo': 'bar'})[0:-2],
                 content_type='application/json')
         
@@ -168,7 +168,7 @@ class TestServices(TestCase):
         
         # save something
         r = self.client.post(url_for('storage.store_data'),
-                headers={'Authorization': 'secret', 'User': '1'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
         
@@ -177,7 +177,7 @@ class TestServices(TestCase):
         
         # get it back
         r = self.client.get(url_for('storage.store_data'),
-                headers={'Authorization': 'secret', 'User': '1'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
                 content_type='application/json')
         
         self.assertStatus(r, 200)

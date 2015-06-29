@@ -6,14 +6,16 @@ import md5
 import urlparse
 
 from sqlalchemy import exc
-from models import Query, db, UserData
-from utils import check_request, cleanup_payload, make_solr_request
+from myads_service.models import Query, db, User
+from myads_service.utils import check_request, cleanup_payload, make_solr_request
 from flask.ext.discoverer import advertise
 
 bp = Blueprint('storage', __name__)
 
 # The database is storing data as BLOB so there is no (practical) limit
-# But we may want to be careful... the size is byte length
+# But we may want to be careful... the size is byte length; if used
+# database limits, the data could be inserted/truncated by the database
+# and corrupted
 MAX_ALLOWED_JSON_SIZE = 10000
 
 @advertise(scopes=['ads:store-query'], rate_limit = [100, 3600*24])
@@ -65,7 +67,7 @@ def query(queryid=None):
     
     # save the query
     query = json.dumps(payload)
-    qid = md5.new(headers['User'] + query).hexdigest()
+    qid = md5.new(headers['X-Adsws-Uid'] + query).hexdigest()
     q = Query(qid=qid, query=query, numfound=num_found)
     
     db.session.begin_nested()
@@ -124,25 +126,25 @@ def store_data():
     except Exception as e:
         return json.dumps({'msg': e.message or e.description}), 400
     
-    user_id = int(headers['User'])
+    user_id = int(headers['X-Adsws-Uid'])
     
     if user_id == 0:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
     
     if request.method == 'GET':
-        q = db.session.query(UserData).filter_by(uid=user_id).first()
+        q = db.session.query(User).filter_by(id=user_id).first()
         if not q:
             return '{}', 200 # or return 404?
-        return q.data, 200
+        return q.user_data or '{}', 200
     elif request.method == 'POST':
         d = json.dumps(payload)
         if len(d) > MAX_ALLOWED_JSON_SIZE:
             return json.dumps({'msg': 'You have exceeded the allowed storage limit, no data was saved'}), 400
-        q = UserData(uid=user_id, data=d)
+        u = User(id=user_id, user_data=d)
     
         db.session.begin_nested()
         try:
-            db.session.merge(q)
+            db.session.merge(u)
             db.session.commit()
         except exc.IntegrityError:
             db.session.rollback()

@@ -1,6 +1,4 @@
 Flask-SQLAlchemy
-Flask-Security
-Flask-Login
 flask-discoverer
 requests
 alembic

@@ -3,6 +3,7 @@ import urlparse
 import urllib
 
 from flask import current_app
+from myads_service.models import User, db
 
 def make_solr_request(query, bigquery=None, headers=None):
     # I'm making a simplification here; sending just one content stream
@@ -59,6 +60,25 @@ def serialize_dict(data):
     v = sorted(v, key=lambda x: x[0])
     return urllib.urlencode(v, doseq=True)
 
+
+def require_user(original_func):
+    # try to login using User header
+    user_id = request.headers.get('X-Adsws-Uid')
+    if user_id:
+        try:
+            user_id = int(user_id)
+        except:
+            raise Exception('The X-Adsws-Uid header must contain integer-like values only')
+        
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            # create a new user
+            db.session.add(User(id=user_id))
+    else:
+        request.headers.set('X-Adsws-Uid', '0')
+        db.session.add(User(id=0))
+
+
 def check_request(request):
     headers = dict(request.headers)
     if 'Content-Type' in headers \
@@ -73,7 +93,7 @@ def check_request(request):
     if headers['Authorization']:
         new_headers['X-Forwarded-Authorization'] = headers['Authorization']
     new_headers['Authorization'] = 'Bearer:' + current_app.config['MYADS_OAUTH_CLIENT_TOKEN']
-    new_headers['User'] = headers.get('User', '0') # User ID
+    new_headers['X-Adsws-Uid'] = headers.get('X-Adsws-Uid', '0') # User ID
     
     return (payload, new_headers)
 
