@@ -3,3 +3,4 @@ flask-discoverer
 requests
 alembic
 sqlalchemy-utils
+psycopg2

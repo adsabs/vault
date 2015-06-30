@@ -23,7 +23,7 @@ def upgrade():
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=True),
-    sa.Column('user_data', sa.BLOB, nullable=True),
+    sa.Column('user_data', sa.LargeBinary, nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     
@@ -35,7 +35,7 @@ def upgrade():
     sa.Column('updated', sa.DateTime(), nullable=True, default=datetime.datetime.utcnow),
     sa.Column('numfound', sa.Integer(), nullable=True),
     sa.Column('category', sa.String(length=255), nullable=True),
-    sa.Column('query', sa.BLOB, nullable=True),
+    sa.Column('query', sa.LargeBinary, nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('qid')
     )

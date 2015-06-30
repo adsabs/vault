@@ -7,6 +7,8 @@ from flask.ext.discoverer import Discoverer
 # for running things in wsgi container; use
 # wsgi.py from the rootdir
 
+db = SQLAlchemy()
+
 def create_app(**config):
     
     opath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -24,15 +26,20 @@ def create_app(**config):
     if config:
         app.config.update(config)
     
-    db = SQLAlchemy(app)
+    db.init_app(app)
     
     ## pysqlite driver breaks transactions, we have to apply some hacks as per
     ## http://docs.sqlalchemy.org/en/rel_0_9/dialects/sqlite.html#pysqlite-serializable
-    if 'sqlite:' in app.config.get('SQLALCHEMY_DATABASE_URI') \
-        or 'sqlite' in app.config.get('SQLALCHEMY_BINDS', {'myads':''})['myads']:
+    
+    if 'sqlite:' in (app.config.get('SQLALCHEMY_DATABASE_URI') or '') \
+        or 'sqlite' in (app.config.get('SQLALCHEMY_BINDS') or {'myads':''})['myads']:
         from sqlalchemy import event
         
-        engine = db.get_engine(app, bind=(app.config.get('SQLALCHEMY_BINDS') and 'myads'))
+        binds = app.config.get('SQLALCHEMY_BINDS')
+        if binds and 'myads' in binds:
+            engine = db.get_engine(app, bind=(app.config.get('SQLALCHEMY_BINDS') and 'myads'))
+        else:
+            engine = db.get_engine(app)
         
         @event.listens_for(engine, "connect")
         def do_connect(dbapi_connection, connection_record):
@@ -43,7 +50,8 @@ def create_app(**config):
         @event.listens_for(engine, "begin")
         def do_begin(conn):
             # emit our own BEGIN
-            conn.execute("BEGIN EXCLUSIVE")
+            conn.execute("BEGIN")
+        
     
     # Note about imports being here rather than at the top level
     # I want to enclose the import into the scope of the create_app()

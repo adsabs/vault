@@ -7,8 +7,8 @@
 """
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import synonym
-
-db = SQLAlchemy() # must be run in the context of a flask application
+from myads_service.app import db
+#db = SQLAlchemy() # must be run in the context of a flask application
 
 class User(db.Model):
     __bind_key__ = 'myads'
@@ -16,7 +16,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
-    user_data = db.Column(db.BLOB)
+    user_data = db.Column(db.LargeBinary)
 
 
 
@@ -31,4 +31,4 @@ class Query(db.Model):
     updated = db.Column(db.TIMESTAMP)
     numfound = db.Column(db.Integer, default=0)
     category = db.Column(db.String(255), default='')
-    query = db.Column(db.BLOB)
+    query = db.Column(db.LargeBinary)
