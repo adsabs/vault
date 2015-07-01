@@ -18,7 +18,7 @@ bp = Blueprint('storage', __name__)
 # and corrupted
 MAX_ALLOWED_JSON_SIZE = 10000
 
-@advertise(scopes=['ads:store-query'], rate_limit = [100, 3600*24])
+@advertise(scopes=['store-query'], rate_limit = [100, 3600*24])
 @bp.route('/query', methods=['POST'])
 @bp.route('/query/<queryid>', methods=['GET'])
 def query(queryid=None):
@@ -90,7 +90,7 @@ def query(queryid=None):
     return json.dumps({'qid': qid, 'numFound': num_found}), 200
 
 
-@advertise(scopes=['ads:execute-query'], rate_limit = [1000, 3600*24])
+@advertise(scopes=['execute-query'], rate_limit = [100, 3600*24])
 @bp.route('/execute_query/<queryid>', methods=['GET'])
 def execute_query(queryid):
     '''Allows you to execute stored query'''
@@ -118,7 +118,7 @@ def execute_query(queryid):
     return r.text, r.status_code
 
 
-@advertise(scopes=['ads:store-data'], rate_limit = [100, 3600*24])
+@advertise(scopes=['store-preferences'], rate_limit = [100, 3600*24])
 @bp.route('/user-data', methods=['GET', 'POST'])
 def store_data():
     '''Allows you to store/retrieve JSON data on the server side.
