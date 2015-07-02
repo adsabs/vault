@@ -6,7 +6,7 @@
 
 Microservice for storing queries, user preferences and stuff
 
-Setup:
+## Setup:
 
 (will wary based on the API deployment strategy) In minimal, you need to have a database and OAUTH_CLIENT_TOKEN
 
@@ -27,11 +27,11 @@ Setup:
 
 
 
-Usage:
+## Usage:
 
 (You can run the service locally: python cors.py)
 
-~ /query ~
+### /query
 
 
  * To save a query:
@@ -42,9 +42,9 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
 {"qid": "772319e35ff5af56dc79dc43e8ff2d9d", "numFound": 9508}
 ```
 
-HOWEVER, it will be contacting SOLR microservice to verify the query (url set in the local_config.py).
+It will contact SOLR microservice to verify the query (make sure url set in the local_config.py is correct).
 
-The response contains 'qid' - that is the key to retrieve and/or execute the query again.
+The response contains 'qid' - the key to retrieve and/or execute the query again.
 
 ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhost:5000/query/772319e35ff5af56dc79dc43e8ff2d9d" -X GET
@@ -63,7 +63,7 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
 ```
 
 
-~ /execute_query ~
+### /execute_query
 
  * To execute the stored query (and get the SOLR response back)
 
@@ -72,14 +72,14 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
 ``` 
 
 
- * To execute the query *and override* some of its parameters (but it doesn't allow you to override 'q' and 'bigquery'):
+ * To execute the query *and override* some of its parameters (you can't override 'q' and 'bigquery' values):
 
 ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhost:5000/execute_query/c8ed1163e7643cea5e81aaefb4bb2d91?fl=title,id" -X GET
 ``` 
 
 
-~ /user-data ~ 
+### /user-data
 
  * To save user-data (i.e. preferences)
 
@@ -96,10 +96,16 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/user-data" -X GET
 ```
 
-~ /configuration ~
+### /configuration
 
  * Retrieve Bumblebee configuration (values that can be used to customize user experience)
 
  ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/configuration" -X GET
+
+{"foo": "bar"}
+
+curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/configuration/foo" -X GET
+
+"bar"
 ```
