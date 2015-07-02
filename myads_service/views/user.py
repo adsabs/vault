@@ -10,7 +10,7 @@ from myads_service.models import Query, db, User
 from myads_service.utils import check_request, cleanup_payload, make_solr_request
 from flask.ext.discoverer import advertise
 
-bp = Blueprint('storage', __name__)
+bp = Blueprint('user', __name__)
 
 # The database is storing data as BLOB so there is no (practical) limit
 # But we may want to be careful... the size is byte length; if used
@@ -159,3 +159,6 @@ def store_data():
         # per PEP-0249 a transaction is always in progress    
         db.session.commit()
         return d, 200
+
+    
+    

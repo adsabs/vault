@@ -48,7 +48,7 @@ class TestServices(TestCase):
               { "bibcode":"2005JGRC..110.4003N" },
               { "bibcode":"2005JGRC..110.4004Y" }]}}""")
 
-        r = self.client.post(url_for('storage.query'),
+        r = self.client.post(url_for('user.query'),
                 headers={'Authorization': 'secret'},
                 data=json.dumps({'q': 'foo:bar'}),
                 content_type='application/json')
@@ -65,7 +65,7 @@ class TestServices(TestCase):
         
         # now test that the query gets executed
         #self.app.debug = True
-        r = self.client.get(url_for('storage.execute_query', queryid=q.qid),
+        r = self.client.get(url_for('user.execute_query', queryid=q.qid),
                 headers={'Authorization': 'secret'},
                 data=json.dumps({'fl': 'title,abstract'}),
                 content_type='application/json')
@@ -89,7 +89,7 @@ class TestServices(TestCase):
               { "bibcode":"2005JGRC..110.4003N" },
               { "bibcode":"2005JGRC..110.4004Y" }]}}""")
 
-        r = self.client.post(url_for('storage.query'),
+        r = self.client.post(url_for('user.query'),
                 headers={'Authorization': 'secret'},
                 data=json.dumps({'q': 'foo:bar', 'fq': '{!bitset}', 'bigquery': 'one\ntwo'}),
                 content_type='application/json')
@@ -106,7 +106,7 @@ class TestServices(TestCase):
         
         # now test that the query gets executed
         #self.app.debug = True
-        r = self.client.get(url_for('storage.execute_query', queryid=q.qid),
+        r = self.client.get(url_for('user.execute_query', queryid=q.qid),
                 headers={'Authorization': 'secret'},
                 data=json.dumps({'fl': 'title,abstract'}),
                 content_type='application/json')
@@ -138,7 +138,7 @@ class TestServices(TestCase):
         '''Tests the ability to store data'''
         
         # wrong request (missing user)
-        r = self.client.get(url_for('storage.store_data'),
+        r = self.client.get(url_for('user.store_data'),
                 headers={'Authorization': 'secret'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
@@ -146,7 +146,7 @@ class TestServices(TestCase):
         self.assertStatus(r, 400)
         
         # no data
-        r = self.client.get(url_for('storage.store_data'),
+        r = self.client.get(url_for('user.store_data'),
                 headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
@@ -155,7 +155,7 @@ class TestServices(TestCase):
         self.assert_(r.json == {}, 'missing empty json response')
         
         # try to save something broken (it has to be json)
-        r = self.client.post(url_for('storage.store_data'),
+        r = self.client.post(url_for('user.store_data'),
                 headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
                 data=json.dumps({'foo': 'bar'})[0:-2],
                 content_type='application/json')
@@ -164,7 +164,7 @@ class TestServices(TestCase):
         self.assert_(r.json['msg'], 'missing explanation')
         
         # save something
-        r = self.client.post(url_for('storage.store_data'),
+        r = self.client.post(url_for('user.store_data'),
                 headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
@@ -173,7 +173,7 @@ class TestServices(TestCase):
         self.assert_(r.json['foo'] == 'bar', 'missing echo')
         
         # get it back
-        r = self.client.get(url_for('storage.store_data'),
+        r = self.client.get(url_for('user.store_data'),
                 headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
                 content_type='application/json')
         

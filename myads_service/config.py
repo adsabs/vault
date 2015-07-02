@@ -13,3 +13,8 @@ MYADS_SOLR_BIGQUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/bigquer
 
 # alembic will 
 use_flask_db_url = True
+
+# a json object holding whatever values we need for the bumblebee 
+# users; this typically is stored in consul and the microservice
+# just exposes it to bbb
+MYADS_BUMBLEBEE_OPTIONS = {}

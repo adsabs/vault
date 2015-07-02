@@ -31,6 +31,9 @@ Usage:
 
 (You can run the service locally: python cors.py)
 
+~ /query ~
+
+
  * To save a query:
 
 ```$bash
@@ -52,18 +55,22 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
 }
 ``` 
 
+* To save a bigquery:
+
+```$bash
+curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhos/query" -X POST -d $'{"q": "foo:bar", "bigquery": "bibcode\nfoo\nbar", "fq": "{!bitset}"}' 
+{"qid": "eb677e40aa77f7b1c3482aa954f63a60"}
+```
+
+
+~ /execute_query ~
+
  * To execute the stored query (and get the SOLR response back)
 
 ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhost:5000/execute_query/772319e35ff5af56dc79dc43e8ff2d9d" -X GET
 ``` 
 
- * To save a bigquery:
-
-```$bash
-curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhos/query" -X POST -d $'{"q": "foo:bar", "bigquery": "bibcode\nfoo\nbar", "fq": "{!bitset}"}' 
-{"qid": "eb677e40aa77f7b1c3482aa954f63a60"}
-```
 
  * To execute the query *and override* some of its parameters (but it doesn't allow you to override 'q' and 'bigquery'):
 
@@ -71,7 +78,8 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhost:5000/execute_query/c8ed1163e7643cea5e81aaefb4bb2d91?fl=title,id" -X GET
 ``` 
 
- 
+
+~ /user-data ~ 
 
  * To save user-data (i.e. preferences)
 
@@ -86,4 +94,12 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "
 
 ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/user-data" -X GET
+```
+
+~ /configuration ~
+
+ * Retrieve Bumblebee configuration (values that can be used to customize user experience)
+
+ ```$bash
+curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/configuration" -X GET
 ```
