@@ -67,8 +67,9 @@ def create_app(**config):
     
     # Note about imports being here rather than at the top level
     # I want to enclose the import into the scope of the create_app()
-    # and not advertise any of the views
-    from myads_service import views
+    # and not advertise any of the views; and yes, i'm importing
+    # everything from inside views (everything in __all__)
+    from . import views
     for o in inspect.getmembers(views, predicate=lambda x: inspect.ismodule(x)):
         for blueprint in inspect.getmembers(o[1], predicate=lambda x: isinstance(x, Blueprint)):
             app.register_blueprint(blueprint[1])

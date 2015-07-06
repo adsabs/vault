@@ -14,6 +14,7 @@ if project_home not in sys.path:
 
 from myads_service import app            
 from myads_service.models import db, Query
+from myads_service.views import utils
 
 class TestServices(TestCase):
     '''Tests that each route is an http response'''
@@ -115,7 +116,6 @@ class TestServices(TestCase):
         
     
     def test_query_utils(self):
-        from myads_service import utils
         
         r = utils.cleanup_payload({'query': 'q=foo&fq=boo&foo=bar&boo=bar'})
         self.assert_(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
