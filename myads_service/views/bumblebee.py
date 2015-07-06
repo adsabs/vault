@@ -1,5 +1,5 @@
 from flask import Blueprint
-from flask import request, current_app as app
+from flask import current_app as app
 
 import json
 

@@ -1,7 +1,7 @@
 from flask import Blueprint
-from flask import current_app, request
-from myads_service.models import Query, db
+from flask import current_app
 from flask.ext.discoverer import advertise
+from ..models import Query, db
 
 '''
 Blueprint full of exportable queries, constructed
