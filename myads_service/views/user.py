@@ -1,13 +1,13 @@
 from flask import Blueprint
-from flask import request, current_app
+from flask import request
 
 import json
 import md5
 import urlparse
 
 from sqlalchemy import exc
-from myads_service.models import Query, db, User
-from myads_service.utils import check_request, cleanup_payload, make_solr_request
+from ..models import Query, db, User
+from ..utils import check_request, cleanup_payload, make_solr_request
 from flask.ext.discoverer import advertise
 
 bp = Blueprint('user', __name__)

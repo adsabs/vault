@@ -3,7 +3,7 @@ import urlparse
 import urllib
 
 from flask import current_app
-from myads_service.models import User, db
+from .models import User, db
 
 def make_solr_request(query, bigquery=None, headers=None):
     # I'm making a simplification here; sending just one content stream

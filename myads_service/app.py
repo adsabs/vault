@@ -1,10 +1,10 @@
 from werkzeug.serving import run_simple
-import os, sys, inspect
-from flask import Flask, Blueprint
+import os, sys
+from flask import Flask
 from flask.ext.discoverer import Discoverer
 from flask.ext.consulate import Consul, ConsulConnectionError
-from myads_service.views import bumblebee, query_as_monument, user
-from myads_service.models import db
+from .views import bumblebee, query_as_monument, user
+from .models import db
 
 # for running things in wsgi container; use
 # wsgi.py from the rootdir
@@ -18,8 +18,7 @@ def create_app(**config):
     
     app = Flask(__name__, static_folder=None)
     app.url_map.strict_slashes = False
-    
-    
+
     app.config.from_pyfile('config.py')
     
     # Load config from Consul
