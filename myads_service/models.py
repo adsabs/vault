@@ -7,8 +7,8 @@
 """
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import synonym
-from myads_service.app import db
-#db = SQLAlchemy() # must be run in the context of a flask application
+
+db = SQLAlchemy() # must be run in the context of a flask application
 
 class User(db.Model):
     __bind_key__ = 'myads'
