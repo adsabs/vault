@@ -1,6 +1,5 @@
 from flask import Blueprint
-from flask import current_app, request
-from myads_service.models import Query, db
+from ..models import Query, db
 from flask.ext.discoverer import advertise
 
 '''

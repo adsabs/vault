@@ -6,9 +6,9 @@
     Models for the users (users) of AdsWS
 """
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import synonym
-from myads_service.app import db
-#db = SQLAlchemy() # must be run in the context of a flask application
+
+db = SQLAlchemy()
+
 
 class User(db.Model):
     __bind_key__ = 'myads'
@@ -17,7 +17,6 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     user_data = db.Column(db.LargeBinary)
-
 
 
 class Query(db.Model):

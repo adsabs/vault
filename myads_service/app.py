@@ -1,14 +1,14 @@
 from werkzeug.serving import run_simple
-import os, sys, inspect, json
-from flask import Flask, Blueprint
-from flask.ext.sqlalchemy import SQLAlchemy
+import os, sys
+from flask import Flask
 from flask.ext.discoverer import Discoverer
 from flask.ext.consulate import Consul, ConsulConnectionError
+from .views import bumblebee, query_as_monument, user
+from .models import db
 
 # for running things in wsgi container; use
 # wsgi.py from the rootdir
 
-db = SQLAlchemy()
 
 def create_app(**config):
     
@@ -18,8 +18,7 @@ def create_app(**config):
     
     app = Flask(__name__, static_folder=None)
     app.url_map.strict_slashes = False
-    
-    
+
     app.config.from_pyfile('config.py')
     
     # Load config from Consul
@@ -32,9 +31,9 @@ def create_app(**config):
     
     # and finally from the local_config.py
     try:
-      app.config.from_pyfile('local_config.py')
+        app.config.from_pyfile('local_config.py')
     except IOError:
-      pass
+        pass
   
     if config:
         app.config.update(config)
@@ -63,17 +62,12 @@ def create_app(**config):
         def do_begin(conn):
             # emit our own BEGIN
             conn.execute("BEGIN")
-        
-    
-    # Note about imports being here rather than at the top level
-    # I want to enclose the import into the scope of the create_app()
-    # and not advertise any of the views
-    from myads_service import views
-    for o in inspect.getmembers(views, predicate=lambda x: inspect.ismodule(x)):
-        for blueprint in inspect.getmembers(o[1], predicate=lambda x: isinstance(x, Blueprint)):
-            app.register_blueprint(blueprint[1])
 
-    discoverer = Discoverer(app)        
+    app.register_blueprint(bumblebee.bp)
+    app.register_blueprint(query_as_monument.bp)
+    app.register_blueprint(user.bp)
+
+    Discoverer(app)
     return app
 
 
