@@ -82,7 +82,7 @@ def require_user(original_func):
 def check_request(request):
     headers = dict(request.headers)
     if 'Content-Type' in headers \
-        and headers['Content-Type'] == 'application/json' \
+        and 'application/json' in headers['Content-Type'] \
         and request.method in ('POST', 'PUT'):
         payload = request.json
     else:
