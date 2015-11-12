@@ -4,4 +4,4 @@ requests
 alembic
 sqlalchemy-utils
 psycopg2
-flask-consulate
+flask-consulate==0.1.2
