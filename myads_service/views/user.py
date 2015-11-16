@@ -112,7 +112,7 @@ def execute_query(queryid):
         query.update(payload)
     
     # always request json
-    query['wt'] = json
+    query['wt'] = 'json'
     
     r = make_solr_request(query=query, bigquery=dataq['bigquery'], headers=headers)
     return r.text, r.status_code
