@@ -49,8 +49,13 @@ def cleanup_payload(payload):
     if len(bigquery) > 0:
         found = False
         for k,v in query.items():
-            if '!bitset' in v and 'fq' in k:
-                found = True
+            if 'fq' in k:
+                if isinstance(v, list):
+                    for x in v:
+                        if '!bitset' in x:
+                            found = True
+                elif '!bitset' in v:
+                    found = True
                 break
         if not found:
             raise Exception('When you pass bigquery data, you also need to tell us how to use it (in fq={!bitset} etc)')
