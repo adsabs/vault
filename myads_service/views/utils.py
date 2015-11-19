@@ -40,6 +40,12 @@ def cleanup_payload(payload):
         if k[0] == 'q' or k[0:2] == 'fq':
             query[k] = v
             
+    # make sure the bigquery is just a string
+    if isinstance(bigquery, list):
+        bigquery = bigquery[0]
+    if not isinstance(bigquery, basestring):
+        raise Exception('The bigquery has to be a string, instead it was {0}'.format(type(bigquery)))
+            
     if len(bigquery) > 0:
         found = False
         for k,v in query.items():
