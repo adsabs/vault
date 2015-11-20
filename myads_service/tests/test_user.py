@@ -77,18 +77,24 @@ class TestServices(TestCase):
     def test_bigquery_storage(self):
         '''Tests the ability to store bigqueries'''
         
+        def callback(request, uri, headers):
+            headers['Content-Type'] = 'application/json'
+            out = """{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":%s},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""" % (json.dumps(request.querystring),)
+            return (200, headers, out)
+              
+        
         httpretty.register_uri(
             httpretty.POST, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
             content_type='big-query/csv',
             status=200,
-            body="""{
-            "responseHeader":{
-            "status":0, "QTime":0,
-            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
-            "response":{"numFound":10456930,"start":0,"docs":[
-              { "bibcode":"2005JGRC..110.4002G" },
-              { "bibcode":"2005JGRC..110.4003N" },
-              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+            body=callback)
 
         r = self.client.post(url_for('user.query'),
                 headers={'Authorization': 'secret'},
@@ -106,13 +112,23 @@ class TestServices(TestCase):
         
         
         # now test that the query gets executed
-        #self.app.debug = True
         r = self.client.get(url_for('user.execute_query', queryid=q.qid),
                 headers={'Authorization': 'secret'},
-                data=json.dumps({'fl': 'title,abstract'}),
+                query_string={'fl': 'title,abstract,foo', 'fq': 'author:foo'},
                 content_type='application/json')
         
         self.assertStatus(r, 200)
+        self.assertListEqual(r.json['responseHeader']['params']['fq'], ['author:foo', '{!bitset}'])
+        self.assertListEqual(r.json['responseHeader']['params']['q'], ['foo:bar'])
+        
+        # and parameters can be overriden
+        r = self.client.get(url_for('user.execute_query', queryid=q.qid),
+                headers={'Authorization': 'secret'},
+                query_string={'fl': 'title,abstract,foo', 'q': 'author:foo'},
+                content_type='application/json')
+        
+        self.assertStatus(r, 200)
+        self.assertListEqual(r.json['responseHeader']['params']['q'], ['author:foo'])
         
     
     def test_query_utils(self):

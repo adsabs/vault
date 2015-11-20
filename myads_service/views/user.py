@@ -110,6 +110,18 @@ def execute_query(queryid):
     # override parameters using supplied params
     if len(payload) > 0:
         query.update(payload)
+        
+    # make sure the {!bitset} is there (when bigquery is used)
+    if dataq['bigquery']:
+        fq = query.get('fq')
+        if not fq:
+            fq = ['{!bitset}']
+        elif '!bitset' not in str(fq):
+            if isinstance(fq, list):
+                fq.append('{!bitset}')
+            else:
+                fq = ['{!bitset}']
+        query['fq'] = fq
     
     # always request json
     query['wt'] = 'json'

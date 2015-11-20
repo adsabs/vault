@@ -1,7 +1,7 @@
-Flask-SQLAlchemy
-flask-discoverer
-requests
-alembic
-sqlalchemy-utils
-psycopg2
+Flask-SQLAlchemy==2.0
+flask-discoverer==0.0.2
+requests==2.8.1
+alembic==0.8.3
+sqlalchemy-utils==0.29.9
+psycopg2==2.6.1
 flask-consulate==0.1.2
