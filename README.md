@@ -34,7 +34,7 @@ Microservice for storing queries, user preferences and stuff
 ### /query
 
 
- * To save a query:
+ * POST (To save a query):
 
 ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhost:5000/query" -X POST -d $'{"q": "title:foo"}' 
@@ -46,6 +46,8 @@ It will contact SOLR microservice to verify the query (make sure url set in the 
 
 The response contains 'qid' - the key to retrieve and/or execute the query again.
 
+ * GET (To get the query info)
+
 ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhost:5000/query/772319e35ff5af56dc79dc43e8ff2d9d" -X GET
 {
@@ -55,7 +57,7 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
 }
 ``` 
 
-* To save a bigquery:
+ * POST (To save a bigquery):
 
 ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhos/query" -X POST -d $'{"q": "foo:bar", "bigquery": "bibcode\nfoo\nbar", "fq": "{!bitset}"}' 
@@ -65,7 +67,7 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
 
 ### /execute_query
 
- * To execute the stored query (and get the SOLR response back)
+ * GET - To execute the stored query (and get the SOLR response back)
 
 ```$bash
 curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhost:5000/execute_query/772319e35ff5af56dc79dc43e8ff2d9d" -X GET
