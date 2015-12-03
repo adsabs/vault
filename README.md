@@ -60,10 +60,11 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
  * POST (To save a bigquery):
 
 ```$bash
-curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "http://localhos/query" -X POST -d $'{"q": "foo:bar", "bigquery": "bibcode\nfoo\nbar", "fq": "{!bitset}"}' 
-{"qid": "eb677e40aa77f7b1c3482aa954f63a60"}
+curl 'http://localhost:5000/query' -H 'Authorization: Bearer:TOKEN' -X POST -d $'{"q":"*:*","fq": "{!bitset}", "bigquery":"bibcode\\n15ASPC..495..40015IAUGA..2257982A\\n2015IAUGA..2257768A\\n2015IAUGA..2257639R\\n2015ASPC..492..208G\\n2015ASPC..492..204F\\n2015ASPC..492..189A\\n2015ASPC..492..150T\\n2015ASPC..492...85E\\n2015ASPC..492...80H\\n2015AAS...22533656H\\n2015AAS...22533655A"}' -H 'Content-Type: application/json'
+{"qid": "36baa12ddb7cc3975d8d0fa4c2f216c1", "numFound": 10}
 ```
 
+**NOTICE** the `Content-Type: application/json` and the double `\\n` escapes
 
 ### /execute_query
 
