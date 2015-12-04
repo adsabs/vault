@@ -18,3 +18,35 @@ use_flask_db_url = True
 # users; this typically is stored in consul and the microservice
 # just exposes it to bbb
 MYADS_BUMBLEBEE_OPTIONS = {}
+
+MYADS_LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            'format': '%(levelname)s\t%(process)d '
+                      '[%(asctime)s]:\t%(message)s',
+            'datefmt': '%m/%d/%Y %H:%M:%S',
+        }
+    },
+    'handlers': {
+        'file': {
+            'formatter': 'default',
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': '/tmp/myads_service.log',
+        },
+        'console': {
+            'formatter': 'default',
+            'level': 'INFO',
+            'class': 'logging.StreamHandler'
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
