@@ -1,3 +1,4 @@
+import logging.config
 from werkzeug.serving import run_simple
 import os, sys, inspect, json
 from flask import Flask, Blueprint
@@ -40,6 +41,9 @@ def create_app(**config):
         app.config.update(config)
     
     db.init_app(app)
+    logging.config.dictConfig(
+        app.config['MYADS_LOGGING']
+    )
     
     ## pysqlite driver breaks transactions, we have to apply some hacks as per
     ## http://docs.sqlalchemy.org/en/rel_0_9/dialects/sqlite.html#pysqlite-serializable
