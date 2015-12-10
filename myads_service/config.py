@@ -34,7 +34,7 @@ MYADS_LOGGING = {
             'formatter': 'default',
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': '/tmp/myads_service.log',
+            'filename': '/tmp/myads_service_app.log',
         },
         'console': {
             'formatter': 'default',
