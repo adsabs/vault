@@ -4,6 +4,7 @@ from flask import request, current_app
 import json
 import md5
 import urlparse
+import requests
 
 from sqlalchemy import exc
 from ..models import Query, db, User
@@ -72,7 +73,7 @@ def query(queryid=None):
         pass 
     
     # save the query
-    q = Query(qid=qid, query=query, numfound=num_found)
+    q = Query(qid=qid, query=query, numfound=num_found, uid=int(headers['X-Adsws-Uid']))
     db.session.begin_nested()
     try:
         db.session.add(q)
@@ -94,11 +95,37 @@ def query(queryid=None):
 @bp.route('/execute_query/<queryid>', methods=['GET'])
 def execute_query(queryid):
     '''Allows you to execute stored query'''
-    
+    # Internal uid
+    uid = int(request.headers['X-Adsws-Uid'])
+
+    # Check if the user anonymous
+    if uid == 0:
+        # Anonymous users can only access queries created by harbour-service
+        url = '{}/harbour@ads'.format(current_app.config['MYADS_USER_EMAIL_ADSWS_API_URL'])
+        headers = {
+            'Authorization': 'Bearer:{}'
+            .format(current_app.config['MYADS_OAUTH_CLIENT_TOKEN'])
+        }
+        r = requests.get(url, headers=headers)
+
+        # Weird response, just send a 500
+        print r.json()
+        if r.status_code != 200 or 'uid' not in r.json():
+            return json.dumps({'error': 'Unexpected error'}), 500
+
+        # Collect the uid for harbour, and let that person be them for a moment
+        uid = r.json()['uid']
+
+    # Get the query object
     q = db.session.query(Query).filter_by(qid=queryid).first()
     if not q:
-        return json.dumps({msg: 'Query not found: ' + qid}), 404
-    
+        return json.dumps({'msg': 'Query not found: ' + queryid}), 404
+
+    # If the user requesting to execute this query is not the same as the one
+    # who stored it, then send them packing!
+    if q.uid != uid:
+        return json.dumps({'error': 'You do not have correct permissions'}), 401
+
     try:
         payload, headers = check_request(request)
     except Exception as e:

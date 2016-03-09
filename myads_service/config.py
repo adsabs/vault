@@ -11,6 +11,9 @@ SQLALCHEMY_ECHO = False
 MYADS_SOLR_QUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/query'
 MYADS_SOLR_BIGQUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/bigquery'
 
+# location of the uid look up
+MYADS_USER_EMAIL_ADSWS_API_URL = 'https://api.adsabs.harvard.edu/v1/user'
+
 # alembic will 
 use_flask_db_url = True
 

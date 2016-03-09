@@ -195,7 +195,99 @@ class TestServices(TestCase):
         
         self.assertStatus(r, 200)
         self.assert_(r.json == {'foo': 'bar'}, 'missing data')
-        
-        
+
+    @httpretty.activate
+    def test_anonymous_user_harbour_query(self):
+        """
+        Test an anonymous user can access queries stored by harbour
+        """
+        def callback(request, uri, headers):
+            headers['Content-Type'] = 'application/json'
+            out = """{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":%s},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""" % (json.dumps(request.querystring),)
+            return (200, headers, out)
+
+        # POST
+        httpretty.register_uri(
+            httpretty.POST, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='big-query/csv',
+            status=200,
+            body=callback
+        )
+
+        # GET
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        # GET uid from e-mail
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_USER_EMAIL_ADSWS_API_URL') + '/harbour@ads',
+            status=200,
+            body="""{"email": "harbour@ads", "uid": 10}""")
+
+        # Store a query
+        url = url_for('user.query')
+        data = {
+            'q': 'foo:bar',
+            'fq': '{!bitset}',
+            'bigquery': 'one\ntwo'
+        }
+        r = self.client.post(
+            url,
+            headers={'Authorization': 'secret', 'X-Adsws-Uid': 10},
+            data=json.dumps(data),
+            content_type='application/json',
+        )
+        self.assertStatus(r, 200)
+        self.assertIn('qid', r.json)
+        qid = r.json['qid']
+
+        # Try to execute the query as an anonymous user
+        url = url_for('user.execute_query', queryid=qid)
+        r = self.client.get(
+                url,
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': 0},
+                query_string={'fl': 'title,abstract,foo', 'fq': 'author:foo'},
+                content_type='application/json'
+        )
+        self.assertStatus(r, 200)
+        self.assertIn('responseHeader', r.json)
+
+
+    @unittest.skip('Not implemented')
+    def test_anonymous_user_other_user_query(self):
+        """
+        Test an anonymous user cannot access other user's queries
+        """
+
+    @unittest.skip('Not implemented')
+    def test_logged_in_user(self):
+        """
+        Test a normal user can access their own queries
+        """
+
+    @unittest.skip('Not implemented')
+    def test_logged_in_user_other_user_query(self):
+        """
+        Test a normal user cannot access another user's queries
+        """
+
+
 if __name__ == '__main__':
     unittest.main()
