@@ -50,7 +50,7 @@ class TestServices(TestCase):
               { "bibcode":"2005JGRC..110.4004Y" }]}}""")
 
         r = self.client.post(url_for('user.query'),
-                headers={'Authorization': 'secret'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '10'},
                 data=json.dumps({'q': 'foo:bar'}),
                 content_type='application/json')
         
@@ -67,7 +67,7 @@ class TestServices(TestCase):
         # now test that the query gets executed
         #self.app.debug = True
         r = self.client.get(url_for('user.execute_query', queryid=q.qid),
-                headers={'Authorization': 'secret'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '10'},
                 data=json.dumps({'fl': 'title,abstract'}),
                 content_type='application/json')
         
@@ -97,7 +97,7 @@ class TestServices(TestCase):
             body=callback)
 
         r = self.client.post(url_for('user.query'),
-                headers={'Authorization': 'secret'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '10'},
                 data=json.dumps({'q': 'foo:bar', 'fq': '{!bitset}', 'bigquery': 'one\ntwo'}),
                 content_type='application/json')
         
@@ -113,7 +113,7 @@ class TestServices(TestCase):
         
         # now test that the query gets executed
         r = self.client.get(url_for('user.execute_query', queryid=q.qid),
-                headers={'Authorization': 'secret'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '10'},
                 query_string={'fl': 'title,abstract,foo', 'fq': 'author:foo'},
                 content_type='application/json')
         
@@ -123,13 +123,12 @@ class TestServices(TestCase):
         
         # and parameters can be overriden
         r = self.client.get(url_for('user.execute_query', queryid=q.qid),
-                headers={'Authorization': 'secret'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '10'},
                 query_string={'fl': 'title,abstract,foo', 'q': 'author:foo'},
                 content_type='application/json')
         
         self.assertStatus(r, 200)
         self.assertListEqual(r.json['responseHeader']['params']['q'], ['author:foo'])
-        
     
     def test_query_utils(self):
         
@@ -148,7 +147,6 @@ class TestServices(TestCase):
         r = utils.cleanup_payload({'query': {'q': 'foo', 'fq': '{!bitset}', 'foo': 'bar', 'boo': 'bar'},
                                    'bigquery': 'foo\nbar'})
         self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
-        
     
     def test_store_data(self):
         '''Tests the ability to store data'''
@@ -269,25 +267,299 @@ class TestServices(TestCase):
         self.assertStatus(r, 200)
         self.assertIn('responseHeader', r.json)
 
-
-    @unittest.skip('Not implemented')
+    @httpretty.activate
     def test_anonymous_user_other_user_query(self):
         """
         Test an anonymous user cannot access other user's queries
         """
+        def callback(request, uri, headers):
+            headers['Content-Type'] = 'application/json'
+            out = """{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":%s},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""" % (json.dumps(request.querystring),)
+            return (200, headers, out)
 
-    @unittest.skip('Not implemented')
+        # POST
+        httpretty.register_uri(
+            httpretty.POST, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='big-query/csv',
+            status=200,
+            body=callback
+        )
+
+        # GET
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        # GET uid from e-mail
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_USER_EMAIL_ADSWS_API_URL') + '/harbour@ads',
+            status=200,
+            body="""{"email": "harbour@ads", "uid": 20}""")
+
+        # Store a query
+        url = url_for('user.query')
+        data = {
+            'q': 'foo:bar',
+            'fq': '{!bitset}',
+            'bigquery': 'one\ntwo'
+        }
+        r = self.client.post(
+            url,
+            headers={'Authorization': 'secret', 'X-Adsws-Uid': 10},
+            data=json.dumps(data),
+            content_type='application/json',
+        )
+        self.assertStatus(r, 200)
+        self.assertIn('qid', r.json)
+        qid = r.json['qid']
+
+        # Try to execute the query as an anonymous user
+        url = url_for('user.execute_query', queryid=qid)
+        r = self.client.get(
+                url,
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': 0},
+                query_string={'fl': 'title,abstract,foo', 'fq': 'author:foo'},
+                content_type='application/json'
+        )
+        self.assertStatus(r, 401)
+        self.assertIn('error', r.json)
+        self.assertEqual(r.json['error'], 'You do not have correct permissions')
+
+    @httpretty.activate
     def test_logged_in_user(self):
         """
         Test a normal user can access their own queries
         """
+        def callback(request, uri, headers):
+            headers['Content-Type'] = 'application/json'
+            out = """{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":%s},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""" % (json.dumps(request.querystring),)
+            return (200, headers, out)
 
-    @unittest.skip('Not implemented')
+        # POST
+        httpretty.register_uri(
+            httpretty.POST, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='big-query/csv',
+            status=200,
+            body=callback
+        )
+
+        # GET
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        # GET uid from e-mail
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_USER_EMAIL_ADSWS_API_URL') + '/harbour@ads',
+            status=200,
+            body="""{"email": "harbour@ads", "uid": 20}""")
+
+        # Store a query
+        url = url_for('user.query')
+        data = {
+            'q': 'foo:bar',
+            'fq': '{!bitset}',
+            'bigquery': 'one\ntwo'
+        }
+        r = self.client.post(
+            url,
+            headers={'Authorization': 'secret', 'X-Adsws-Uid': 30},
+            data=json.dumps(data),
+            content_type='application/json',
+        )
+        self.assertStatus(r, 200)
+        self.assertIn('qid', r.json)
+        qid = r.json['qid']
+
+        # Try to execute the query as an anonymous user
+        url = url_for('user.execute_query', queryid=qid)
+        r = self.client.get(
+                url,
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': 30},
+                query_string={'fl': 'title,abstract,foo', 'fq': 'author:foo'},
+                content_type='application/json'
+        )
+        self.assertStatus(r, 200)
+        self.assertIn('responseHeader', r.json)
+
+    @httpretty.activate
     def test_logged_in_user_other_user_query(self):
         """
         Test a normal user cannot access another user's queries
         """
+        def callback(request, uri, headers):
+            headers['Content-Type'] = 'application/json'
+            out = """{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":%s},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""" % (json.dumps(request.querystring),)
+            return (200, headers, out)
 
+        # POST
+        httpretty.register_uri(
+            httpretty.POST, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='big-query/csv',
+            status=200,
+            body=callback
+        )
+
+        # GET
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        # GET uid from e-mail
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_USER_EMAIL_ADSWS_API_URL') + '/harbour@ads',
+            status=200,
+            body="""{"email": "harbour@ads", "uid": 20}""")
+
+        # Store a query
+        url = url_for('user.query')
+        data = {
+            'q': 'foo:bar',
+            'fq': '{!bitset}',
+            'bigquery': 'one\ntwo'
+        }
+        r = self.client.post(
+            url,
+            headers={'Authorization': 'secret', 'X-Adsws-Uid': 10},
+            data=json.dumps(data),
+            content_type='application/json',
+        )
+        self.assertStatus(r, 200)
+        self.assertIn('qid', r.json)
+        qid = r.json['qid']
+
+        # Try to execute the query as an anonymous user
+        url = url_for('user.execute_query', queryid=qid)
+        r = self.client.get(
+                url,
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': 30},
+                query_string={'fl': 'title,abstract,foo', 'fq': 'author:foo'},
+                content_type='application/json'
+        )
+        self.assertStatus(r, 401)
+        self.assertIn('error', r.json)
+        self.assertEqual(r.json['error'], 'You do not have correct permissions')
+
+    @httpretty.activate
+    def test_logged_in_user_harbour_query(self):
+        """
+        Test a logged in user can access queries stored by harbour
+        """
+        def callback(request, uri, headers):
+            headers['Content-Type'] = 'application/json'
+            out = """{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":%s},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""" % (json.dumps(request.querystring),)
+            return (200, headers, out)
+
+        # POST
+        httpretty.register_uri(
+            httpretty.POST, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='big-query/csv',
+            status=200,
+            body=callback
+        )
+
+        # GET
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        # GET uid from e-mail
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('MYADS_USER_EMAIL_ADSWS_API_URL') + '/harbour@ads',
+            status=200,
+            body="""{"email": "harbour@ads", "uid": 100}""")
+
+        # Store a query
+        url = url_for('user.query')
+        data = {
+            'q': 'foo:bar',
+            'fq': '{!bitset}',
+            'bigquery': 'one\ntwo'
+        }
+        r = self.client.post(
+            url,
+            headers={'Authorization': 'secret', 'X-Adsws-Uid': 100},
+            data=json.dumps(data),
+            content_type='application/json',
+        )
+        self.assertStatus(r, 200)
+        self.assertIn('qid', r.json)
+        qid = r.json['qid']
+
+        # Try to execute the query as an anonymous user
+        url = url_for('user.execute_query', queryid=qid)
+        r = self.client.get(
+                url,
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': 10},
+                query_string={'fl': 'title,abstract,foo', 'fq': 'author:foo'},
+                content_type='application/json'
+        )
+        self.assertStatus(r, 200)
+        self.assertIn('responseHeader', r.json)
 
 if __name__ == '__main__':
     unittest.main()
