@@ -3,7 +3,8 @@ MYADS_OAUTH_CLIENT_TOKEN = 'to be provided'
 MYADS_VERSION = 'v0.1' # Arbitrary string identifying the service (will be returned in the headers)
 
 SQLALCHEMY_BINDS = {
-    'myads':        'sqlite:///'
+    'myads':        'sqlite:///',
+    'institutes':   'sqlite:///'
 }
 SQLALCHEMY_ECHO = False
 
