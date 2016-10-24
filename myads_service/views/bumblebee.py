@@ -1,5 +1,6 @@
 from flask import Blueprint
 from flask import current_app as app
+from ..models import db, Library
 
 import json
 
@@ -19,7 +20,11 @@ def configuration(key=None):
         return json.dumps({'msg': 'Server misconfiguration, MYADS_BUMBLEBEE_OPTIONS is of an invalid type'}), 500
     
     if key:
-        if key in opts:
+        if key == 'link_servers':
+            res = db.session.query(Library).all()
+            link_servers = [{"name": l.libname, "link": l.libserver, "gif":l.iconurl} for l in res]
+            return json.dumps(link_servers), 200
+        elif key in opts:
             return json.dumps(opts[key]), 200
         else:
             return '{}', 404
