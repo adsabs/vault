@@ -1,7 +1,7 @@
 from flask import Blueprint
 from flask import current_app as app
 from ..models import db, Library
-
+from operator import itemgetter
 import json
 
 from flask.ext.discoverer import advertise
@@ -23,6 +23,7 @@ def configuration(key=None):
         if key == 'link_servers':
             res = db.session.query(Library).all()
             link_servers = [{"name": l.libname, "link": l.libserver, "gif":l.iconurl} for l in res]
+            link_servers = sorted(link_servers, key=itemgetter('name'))
             return json.dumps(link_servers), 200
         elif key in opts:
             return json.dumps(opts[key]), 200
