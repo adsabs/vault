@@ -2,9 +2,8 @@ import logging.config
 from werkzeug.serving import run_simple
 import os, sys, inspect, json
 from flask import Flask, Blueprint
-from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.discoverer import Discoverer
-from flask.ext.consulate import Consul, ConsulConnectionError
+from flask_sqlalchemy import SQLAlchemy
+from flask_discoverer import Discoverer
 
 # for running things in wsgi container; use
 # wsgi.py from the rootdir
@@ -19,18 +18,10 @@ def create_app(**config):
     
     app = Flask(__name__, static_folder=None)
     app.url_map.strict_slashes = False
-    
-    
+
+
     app.config.from_pyfile('config.py')
-    
-    # Load config from Consul
-    Consul(app)  # load_config expects consul to be registered
-    try:
-        app.extensions['consul'].apply_remote_config()
-    except ConsulConnectionError as error:
-        app.logger.warning('Could not apply config from consul: {}'
-                           .format(error))
-    
+
     # and finally from the local_config.py
     try:
       app.config.from_pyfile('local_config.py')

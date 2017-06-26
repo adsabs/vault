@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask import current_app
-from flask.ext.discoverer import advertise
+from flask_discoverer import advertise
 from ..models import Query, db
 
 '''
