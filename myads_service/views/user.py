@@ -8,7 +8,7 @@ import urlparse
 from sqlalchemy import exc
 from ..models import Query, db, User
 from .utils import check_request, cleanup_payload, make_solr_request
-from flask.ext.discoverer import advertise
+from flask_discoverer import advertise
 
 bp = Blueprint('user', __name__)
 

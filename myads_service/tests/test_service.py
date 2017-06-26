@@ -5,7 +5,7 @@ project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
     
-from flask.ext.testing import TestCase
+from flask_testing import TestCase
 from flask import url_for, request
 import unittest
 import json

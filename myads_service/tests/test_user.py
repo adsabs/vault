@@ -1,6 +1,6 @@
 import sys, os
 from urllib import urlencode
-from flask.ext.testing import TestCase
+from flask_testing import TestCase
 from flask import url_for, request
 import unittest
 import json
