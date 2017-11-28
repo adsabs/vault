@@ -28,9 +28,9 @@ def create_app(**config):
 
         binds = app.config.get('SQLALCHEMY_BINDS')
         if binds and 'myads' in binds:
-            engine = db.get_engine(app, bind=(app.config.get('SQLALCHEMY_BINDS') and 'myads'))
+            engine = app.db.get_engine(app, bind=(app.config.get('SQLALCHEMY_BINDS') and 'myads'))
         else:
-            engine = db.get_engine(app)
+            engine = app.db.get_engine(app)
 
         @event.listens_for(engine, "connect")
         def do_connect(dbapi_connection, connection_record):
