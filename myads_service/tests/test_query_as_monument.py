@@ -21,6 +21,7 @@ class TestServices(TestCase):
     def create_app(self):
         '''Start the wsgi application'''
         a = app.create_app(**{
+               'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
                'SQLALCHEMY_BINDS': {'myads': 'sqlite:///'},
                'SQLALCHEMY_ECHO': False,
                'TESTING': True,

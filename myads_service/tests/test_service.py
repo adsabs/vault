@@ -21,6 +21,7 @@ class TestServices(TestCase):
         from myads_service import app
         a = app.create_app(**{
                'SQLALCHEMY_DATABASE_URI': 'sqlite://',
+               'SQLALCHEMY_BINDS': {'myads': 'sqlite:///'},
                'SQLALCHEMY_ECHO': False,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,

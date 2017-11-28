@@ -18,6 +18,7 @@ class TestSite(TestCase):
     def create_app(self):
         '''Start the wsgi application'''
         a = app.create_app(**{
+               'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
                'SQLALCHEMY_BINDS': {'myads': 'sqlite:///'},
                'SQLALCHEMY_ECHO': True,
                'TESTING': True,
@@ -51,6 +52,7 @@ class TestOpenURL(TestCase):
     def create_app(self):
         '''Start the wsgi application'''
         a = app.create_app(**{
+               'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
                'SQLALCHEMY_BINDS': {'myads': 'sqlite:///', 'institutes': 'sqlite:///'},
                'SQLALCHEMY_ECHO': True,
                'TESTING': True,
