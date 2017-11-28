@@ -17,7 +17,12 @@ fileConfig(config.config_file_name)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+#target_metadata = None
+opath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if opath not in sys.path:
+    sys.path.insert(0, opath)
+import myads_service.models
+target_metadata = myads_service.models.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -46,10 +51,10 @@ def get_app_config(key):
     opath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     if opath not in sys.path:
         sys.path.insert(0, opath)
-        
+
     from myads_service import app as application
     app = application.create_app()
-    
+
     with app.app_context() as c:
         print 'Getting actual config for', key, app.config.get(key)
         return app.config.get(key)
@@ -63,9 +68,9 @@ def run_migrations_online():
     """
     cfg = config.get_section(config.config_ini_section)
     if 'use_flask_db_url' in cfg and cfg['use_flask_db_url'] == 'true':
-        cfg['sqlalchemy.url'] = get_app_config('SQLALCHEMY_BINDS')['myads']
-    
-    
+        cfg['sqlalchemy.url'] = get_app_config('SQLALCHEMY_DATABASE_URI')
+
+
     engine = engine_from_config(
                 cfg,
                 prefix='sqlalchemy.',

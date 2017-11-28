@@ -23,14 +23,9 @@ def create_app(**config):
     ## pysqlite driver breaks transactions, we have to apply some hacks as per
     ## http://docs.sqlalchemy.org/en/rel_0_9/dialects/sqlite.html#pysqlite-serializable
 
-    if 'sqlite' in (app.config.get('SQLALCHEMY_BINDS') or {'myads':''})['myads']:
+    if 'sqlite' in app.config.get('SQLALCHEMY_DATABASE_URI', None):
         from sqlalchemy import event
-
-        binds = app.config.get('SQLALCHEMY_BINDS')
-        if binds and 'myads' in binds:
-            engine = app.db.get_engine(app, bind=(app.config.get('SQLALCHEMY_BINDS') and 'myads'))
-        else:
-            engine = app.db.get_engine(app)
+        engine = app.db.engine
 
         @event.listens_for(engine, "connect")
         def do_connect(dbapi_connection, connection_record):

@@ -12,6 +12,7 @@ import json
 import httpretty
 import cgi
 from StringIO import StringIO
+from myads_service.models import Base
 
 class TestServices(TestCase):
     '''Tests that each route is an http response'''
@@ -21,12 +22,13 @@ class TestServices(TestCase):
         from myads_service import app
         a = app.create_app(**{
                'SQLALCHEMY_DATABASE_URI': 'sqlite://',
-               'SQLALCHEMY_BINDS': {'myads': 'sqlite:///'},
                'SQLALCHEMY_ECHO': False,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,
                'TRAP_BAD_REQUEST_ERRORS': True
             })
+        Base.query = a.db.session.query_property()
+        Base.metadata.create_all(bind=a.db.engine)
         return a
 
 

@@ -10,7 +10,7 @@ if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
 from myads_service import app
-from myads_service.models import Query, Institute, Library
+from myads_service.models import Query, Institute, Library, Base
 
 class TestSite(TestCase):
     '''Tests that each route is an http response'''
@@ -19,13 +19,13 @@ class TestSite(TestCase):
         '''Start the wsgi application'''
         a = app.create_app(**{
                'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
-               'SQLALCHEMY_BINDS': {'myads': 'sqlite:///'},
                'SQLALCHEMY_ECHO': True,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,
                'TRAP_BAD_REQUEST_ERRORS': True,
                'MYADS_BUMBLEBEE_OPTIONS': {'foo': 'bar'}
             })
+        a.db.create_all()
         return a
 
 
@@ -53,13 +53,14 @@ class TestOpenURL(TestCase):
         '''Start the wsgi application'''
         a = app.create_app(**{
                'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
-               'SQLALCHEMY_BINDS': {'myads': 'sqlite:///', 'institutes': 'sqlite:///'},
                'SQLALCHEMY_ECHO': True,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,
                'TRAP_BAD_REQUEST_ERRORS': True,
                'MYADS_BUMBLEBEE_OPTIONS': {'foo': 'bar'}
             })
+        Base.query = a.db.session.query_property()
+        Base.metadata.create_all(bind=a.db.engine)
         return a
 
     def setUp(self):

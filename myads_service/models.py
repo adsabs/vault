@@ -7,16 +7,11 @@
 """
 from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from flask_sqlalchemy import Model, _BoundDeclarativeMeta
 
 
-## Flask-SQLAlchemy extension specific:
-# cls and metaclass should be delegated to flask-sqlalchemy to be able to have
-# multiple database definitions in SQLALCHEMY_BINDS
-Base = declarative_base(cls=Model, name='Model', metaclass=_BoundDeclarativeMeta)
+Base = declarative_base()
 
 class User(Base):
-    __bind_key__ = 'myads'
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
@@ -26,7 +21,6 @@ class User(Base):
 
 
 class Query(Base):
-    __bind_key__ = 'myads'
     __tablename__ = 'queries'
 
     id = Column(Integer, primary_key=True)
@@ -39,7 +33,6 @@ class Query(Base):
     query = Column(LargeBinary)
 
 class Institute(Base):
-    __bind_key__ = 'institutes'
     __tablename__ = 'institute'
     id = Column(Integer, primary_key=True)
     canonical_name = Column(String)
@@ -55,7 +48,6 @@ class Institute(Base):
             .format(self.canonical_name, self.ringgold_id, self.ads_id)
 
 class Library(Base):
-    __bind_key__ = 'institutes'
     __tablename__ = 'library'
     id = Column(Integer, primary_key=True)
     libserver = Column(String)

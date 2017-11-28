@@ -16,9 +16,7 @@ Microservice for storing queries, user preferences and stuff
 
   * create modified myads_service/local_config.py, update (at least)
   	MYADS_OAUTH_CLIENT_TOKEN = '.......'
-	SQLALCHEMY_BINDS = {
-	    'myads':        '.....'
-	}
+    SQLALCHEMY_DATABASE_URI = "....."
 
   * run `alembic upgrade head`
 

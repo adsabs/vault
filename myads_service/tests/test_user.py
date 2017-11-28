@@ -13,7 +13,7 @@ if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
 from myads_service import app
-from myads_service.models import Query
+from myads_service.models import Query, Base
 from myads_service.views import utils
 
 class TestServices(TestCase):
@@ -23,12 +23,13 @@ class TestServices(TestCase):
         '''Start the wsgi application'''
         a = app.create_app(**{
                'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
-               'SQLALCHEMY_BINDS': {'myads': 'sqlite:///'},
                'SQLALCHEMY_ECHO': True,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,
                'TRAP_BAD_REQUEST_ERRORS': True
             })
+        Base.query = a.db.session.query_property()
+        Base.metadata.create_all(bind=a.db.engine)
         return a
 
 
@@ -58,10 +59,12 @@ class TestServices(TestCase):
 
 
         self.assert_(r.json['qid'], 'qid is missing')
-        q = self.app.db.session.query(Query).filter_by(qid=r.json['qid']).first()
+        with self.app.session_scope() as session:
+            q = session.query(Query).filter_by(qid=r.json['qid']).first()
 
-        self.assert_(q.qid == r.json['qid'], 'query was not saved')
-        self.assert_(q.query == json.dumps({"query": "q=foo%3Abar", "bigquery": ""}, 'query was not saved'))
+            self.assert_(q.qid == r.json['qid'], 'query was not saved')
+            self.assert_(q.query == json.dumps({"query": "q=foo%3Abar", "bigquery": ""}, 'query was not saved'))
+            session.expunge_all()
 
 
         # now test that the query gets executed
@@ -105,10 +108,13 @@ class TestServices(TestCase):
 
 
         self.assert_(r.json['qid'], 'qid is missing')
-        q = self.app.db.session.query(Query).filter_by(qid=r.json['qid']).first()
+        with self.app.session_scope() as session:
+            q = session.query(Query).filter_by(qid=r.json['qid']).first()
+            #q = self.app.db.session.query(Query).filter_by(qid=r.json['qid']).first()
 
-        self.assert_(q.qid == r.json['qid'], 'query was not saved')
-        self.assert_(q.query == json.dumps({"query": "fq=%7B%21bitset%7D&q=foo%3Abar", "bigquery": "one\ntwo"}, 'query was not saved'))
+            self.assert_(q.qid == r.json['qid'], 'query was not saved')
+            self.assert_(q.query == json.dumps({"query": "fq=%7B%21bitset%7D&q=foo%3Abar", "bigquery": "one\ntwo"}, 'query was not saved'))
+            session.expunge_all()
 
 
         # now test that the query gets executed
