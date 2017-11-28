@@ -1,53 +1,37 @@
-import logging.config
 from werkzeug.serving import run_simple
-import os, sys, inspect, json
-from flask import Flask, Blueprint
-from flask_sqlalchemy import SQLAlchemy
+import os, sys, inspect
+from flask import Blueprint
 from flask_discoverer import Discoverer
+from adsmutils import ADSFlask
 
 # for running things in wsgi container; use
 # wsgi.py from the rootdir
 
-db = SQLAlchemy()
-
 def create_app(**config):
-    
+
     opath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     if opath not in sys.path:
         sys.path.insert(0, opath)
-    
-    app = Flask(__name__, static_folder=None)
+
+    if config:
+        app = ADSFlask(__name__, static_folder=None, local_config=config)
+    else:
+        app = ADSFlask(__name__, static_folder=None)
+
     app.url_map.strict_slashes = False
 
-
-    app.config.from_pyfile('config.py')
-
-    # and finally from the local_config.py
-    try:
-      app.config.from_pyfile('local_config.py')
-    except IOError:
-      pass
-  
-    if config:
-        app.config.update(config)
-    
-    db.init_app(app)
-    logging.config.dictConfig(
-        app.config['MYADS_LOGGING']
-    )
-    
     ## pysqlite driver breaks transactions, we have to apply some hacks as per
     ## http://docs.sqlalchemy.org/en/rel_0_9/dialects/sqlite.html#pysqlite-serializable
-    
+
     if 'sqlite' in (app.config.get('SQLALCHEMY_BINDS') or {'myads':''})['myads']:
         from sqlalchemy import event
-        
+
         binds = app.config.get('SQLALCHEMY_BINDS')
         if binds and 'myads' in binds:
             engine = db.get_engine(app, bind=(app.config.get('SQLALCHEMY_BINDS') and 'myads'))
         else:
             engine = db.get_engine(app)
-        
+
         @event.listens_for(engine, "connect")
         def do_connect(dbapi_connection, connection_record):
             # disable pysqlite's emitting of the BEGIN statement entirely.
@@ -58,8 +42,8 @@ def create_app(**config):
         def do_begin(conn):
             # emit our own BEGIN
             conn.execute("BEGIN")
-        
-    
+
+
     # Note about imports being here rather than at the top level
     # I want to enclose the import into the scope of the create_app()
     # and not advertise any of the views; and yes, i'm importing
@@ -69,7 +53,8 @@ def create_app(**config):
         for blueprint in inspect.getmembers(o[1], predicate=lambda x: isinstance(x, Blueprint)):
             app.register_blueprint(blueprint[1])
 
-    discoverer = Discoverer(app)        
+    discoverer = Discoverer(app)
+
     return app
 
 

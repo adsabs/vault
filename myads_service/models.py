@@ -5,58 +5,63 @@
 
     Models for the users (users) of AdsWS
 """
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import synonym
+from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from flask_sqlalchemy import Model, _BoundDeclarativeMeta
 
-db = SQLAlchemy() # must be run in the context of a flask application
 
-class User(db.Model):
+## Flask-SQLAlchemy extension specific:
+# cls and metaclass should be delegated to flask-sqlalchemy to be able to have
+# multiple database definitions in SQLALCHEMY_BINDS
+Base = declarative_base(cls=Model, name='Model', metaclass=_BoundDeclarativeMeta)
+
+class User(Base):
     __bind_key__ = 'myads'
     __tablename__ = 'users'
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255))
-    user_data = db.Column(db.LargeBinary)
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+    user_data = Column(LargeBinary)
 
 
 
-class Query(db.Model):
+class Query(Base):
     __bind_key__ = 'myads'
     __tablename__ = 'queries'
 
-    id = db.Column(db.Integer, primary_key=True)
-    uid = db.Column(db.Integer, default=0)
-    qid = db.Column(db.String(32))
-    created = db.Column(db.TIMESTAMP)
-    updated = db.Column(db.TIMESTAMP)
-    numfound = db.Column(db.Integer, default=0)
-    category = db.Column(db.String(255), default='')
-    query = db.Column(db.LargeBinary)
+    id = Column(Integer, primary_key=True)
+    uid = Column(Integer, default=0)
+    qid = Column(String(32))
+    created = Column(TIMESTAMP)
+    updated = Column(TIMESTAMP)
+    numfound = Column(Integer, default=0)
+    category = Column(String(255), default='')
+    query = Column(LargeBinary)
 
-class Institute(db.Model):
+class Institute(Base):
     __bind_key__ = 'institutes'
     __tablename__ = 'institute'
-    id = db.Column(db.Integer, primary_key=True)
-    canonical_name = db.Column(db.String)
-    city = db.Column(db.String)
-    street = db.Column(db.String)
-    state = db.Column(db.String)
-    country = db.Column(db.String)
-    ringgold_id = db.Column(db.Integer)
-    ads_id = db.Column(db.String)
+    id = Column(Integer, primary_key=True)
+    canonical_name = Column(String)
+    city = Column(String)
+    street = Column(String)
+    state = Column(String)
+    country = Column(String)
+    ringgold_id = Column(Integer)
+    ads_id = Column(String)
 
     def __repr__(self):
         return '<Insitute, name: {0}, Ringgold ID: {1}, ADS ID: {2}>'\
             .format(self.canonical_name, self.ringgold_id, self.ads_id)
 
-class Library(db.Model):
+class Library(Base):
     __bind_key__ = 'institutes'
     __tablename__ = 'library'
-    id = db.Column(db.Integer, primary_key=True)
-    libserver = db.Column(db.String)
-    iconurl   = db.Column(db.String)
-    libname   = db.Column(db.String)
-    institute = db.Column(db.Integer, db.ForeignKey('institute.id'))
+    id = Column(Integer, primary_key=True)
+    libserver = Column(String)
+    iconurl   = Column(String)
+    libname   = Column(String)
+    institute = Column(Integer, ForeignKey('institute.id'))
 
     def __repr__(self):
         return '<Library, name: {0}, OpenURL server: {1}, OpenURL icon: {2}>'\
