@@ -1,13 +1,13 @@
-MYADS_APP_SECRET_KEY = 'fake'
-MYADS_OAUTH_CLIENT_TOKEN = 'to be provided'
-MYADS_VERSION = 'v0.1' # Arbitrary string identifying the service (will be returned in the headers)
+VAULT_APP_SECRET_KEY = 'fake'
+VAULT_OAUTH_CLIENT_TOKEN = 'to be provided'
+VAULT_VERSION = 'v0.1' # Arbitrary string identifying the service (will be returned in the headers)
 
 SQLALCHEMY_DATABASE_URI = "sqlite:///"
 SQLALCHEMY_ECHO = False
 
 # location of the remote solr-microservice
-MYADS_SOLR_QUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/query'
-MYADS_SOLR_BIGQUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/bigquery'
+VAULT_SOLR_QUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/query'
+VAULT_SOLR_BIGQUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/bigquery'
 
 # alembic will
 use_flask_db_url = True
@@ -15,9 +15,9 @@ use_flask_db_url = True
 # a json object holding whatever values we need for the bumblebee
 # users; this typically is stored in consul and the microservice
 # just exposes it to bbb
-MYADS_BUMBLEBEE_OPTIONS = {}
+VAULT_BUMBLEBEE_OPTIONS = {}
 
-MYADS_LOGGING = {
+VAULT_LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
@@ -32,7 +32,7 @@ MYADS_LOGGING = {
             'formatter': 'default',
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': '/tmp/myads_service_app.log',
+            'filename': '/tmp/vault_service_app.log',
         },
         'console': {
             'formatter': 'default',

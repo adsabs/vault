@@ -12,9 +12,9 @@ project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
-from myads_service import app
-from myads_service.models import Query, Base
-from myads_service.views import utils
+from vault_service import app
+from vault_service.models import Query, Base
+from vault_service.views import utils
 
 class TestServices(TestCase):
     '''Tests that each route is an http response'''
@@ -38,7 +38,7 @@ class TestServices(TestCase):
         '''Tests the ability to store queries'''
 
         httpretty.register_uri(
-            httpretty.GET, self.app.config.get('MYADS_SOLR_QUERY_ENDPOINT'),
+            httpretty.GET, self.app.config.get('VAULT_SOLR_QUERY_ENDPOINT'),
             content_type='application/json',
             status=200,
             body="""{
@@ -94,7 +94,7 @@ class TestServices(TestCase):
 
 
         httpretty.register_uri(
-            httpretty.POST, self.app.config.get('MYADS_SOLR_BIGQUERY_ENDPOINT'),
+            httpretty.POST, self.app.config.get('VAULT_SOLR_BIGQUERY_ENDPOINT'),
             content_type='big-query/csv',
             status=200,
             body=callback)

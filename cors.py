@@ -1,6 +1,6 @@
 
 from flask_cors import CORS
-from myads_service.app import create_app
+from vault_service.app import create_app
 
 if __name__ == '__main__':
     app = create_app()

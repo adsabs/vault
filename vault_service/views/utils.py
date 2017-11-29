@@ -15,9 +15,9 @@ def make_solr_request(query, bigquery=None, headers=None):
     if bigquery:
         headers = dict(headers)
         headers['content-type'] = 'big-query/csv'
-        return requests.post(current_app.config['MYADS_SOLR_BIGQUERY_ENDPOINT'], params=query, headers=headers, data=bigquery)
+        return requests.post(current_app.config['VAULT_SOLR_BIGQUERY_ENDPOINT'], params=query, headers=headers, data=bigquery)
     else:
-        return requests.get(current_app.config['MYADS_SOLR_QUERY_ENDPOINT'], params=query, headers=headers)
+        return requests.get(current_app.config['VAULT_SOLR_QUERY_ENDPOINT'], params=query, headers=headers)
 
 
 def cleanup_payload(payload):
@@ -85,7 +85,7 @@ def check_request(request):
     new_headers = {}
     if headers['Authorization']:
         new_headers['X-Forwarded-Authorization'] = headers['Authorization']
-    new_headers['Authorization'] = 'Bearer:' + current_app.config['MYADS_OAUTH_CLIENT_TOKEN']
+    new_headers['Authorization'] = 'Bearer:' + current_app.config['VAULT_OAUTH_CLIENT_TOKEN']
     new_headers['X-Adsws-Uid'] = headers.get('X-Adsws-Uid', '0') # User ID
 
     return (payload, new_headers)

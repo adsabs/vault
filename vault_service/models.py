@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-    myads_service.models
+    vault_service.models
     ~~~~~~~~~~~~~~~~~~~~~
 
     Models for the users (users) of AdsWS

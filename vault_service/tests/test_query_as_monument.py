@@ -12,8 +12,8 @@ project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
-from myads_service import app
-from myads_service.models import Query, Base
+from vault_service import app
+from vault_service.models import Query, Base
 
 class TestServices(TestCase):
     '''Tests that each route is an http response'''

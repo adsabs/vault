@@ -21,8 +21,8 @@ fileConfig(config.config_file_name)
 opath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if opath not in sys.path:
     sys.path.insert(0, opath)
-import myads_service.models
-target_metadata = myads_service.models.Base.metadata
+import vault_service.models
+target_metadata = vault_service.models.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -52,7 +52,7 @@ def get_app_config(key):
     if opath not in sys.path:
         sys.path.insert(0, opath)
 
-    from myads_service import app as application
+    from vault_service import app as application
     app = application.create_app()
 
     with app.app_context() as c:

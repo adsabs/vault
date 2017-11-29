@@ -1,5 +1,5 @@
 from werkzeug.serving import run_simple
-from myads_service import app
+from vault_service import app
 
 application = app.create_app()
 

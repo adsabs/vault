@@ -12,12 +12,12 @@ bp = Blueprint('bumblebee', __name__)
 @bp.route('/configuration', methods=['GET'])
 @bp.route('/configuration/<key>', methods=['GET'])
 def configuration(key=None):
-    '''Allows you to retrieve JSON data from MYADS_BUMBLEBEE_OPTIONS'''
+    '''Allows you to retrieve JSON data from VAULT_BUMBLEBEE_OPTIONS'''
 
-    opts = current_app.config.get('MYADS_BUMBLEBEE_OPTIONS') or {}
+    opts = current_app.config.get('VAULT_BUMBLEBEE_OPTIONS') or {}
 
     if not isinstance(opts, dict):
-        return json.dumps({'msg': 'Server misconfiguration, MYADS_BUMBLEBEE_OPTIONS is of an invalid type'}), 500
+        return json.dumps({'msg': 'Server misconfiguration, VAULT_BUMBLEBEE_OPTIONS is of an invalid type'}), 500
 
     if key:
         if key == 'link_servers':

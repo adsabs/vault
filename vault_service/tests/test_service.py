@@ -12,14 +12,14 @@ import json
 import httpretty
 import cgi
 from StringIO import StringIO
-from myads_service.models import Base
+from vault_service.models import Base
 
 class TestServices(TestCase):
     '''Tests that each route is an http response'''
 
     def create_app(self):
         '''Start the wsgi application'''
-        from myads_service import app
+        from vault_service import app
         a = app.create_app(**{
                'SQLALCHEMY_DATABASE_URI': 'sqlite://',
                'SQLALCHEMY_ECHO': False,
