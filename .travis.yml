@@ -16,7 +16,7 @@ install:
   - "pip install -r $REQUIREMENTS-requirements.txt"
 
 script:
-  - "py.test myads_service"
+  - "py.test vault_service"
 
 after_success:
   - "coveralls"
