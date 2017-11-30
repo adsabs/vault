@@ -25,8 +25,16 @@ class TestSite(TestCase):
                'TRAP_BAD_REQUEST_ERRORS': True,
                'VAULT_BUMBLEBEE_OPTIONS': {'foo': 'bar'}
             })
-        a.db.create_all()
         return a
+
+    def setUp(self):
+        Base.metadata.create_all(bind=self.app.db.engine)
+
+
+    def tearDown(self):
+        self.app.db.session.remove()
+        self.app.db.drop_all()
+
 
 
     def test_store_data(self):
@@ -60,10 +68,10 @@ class TestOpenURL(TestCase):
                'VAULT_BUMBLEBEE_OPTIONS': {'foo': 'bar'}
             })
         Base.query = a.db.session.query_property()
-        Base.metadata.create_all(bind=a.db.engine)
         return a
 
     def setUp(self):
+        Base.metadata.create_all(bind=self.app.db.engine)
         # Add a stub insitute
         self.institute = Institute(id=0,
             canonical_name='Name',

@@ -89,8 +89,6 @@ def query(queryid=None):
             #q.updated = datetime.datetime.utcnow()
             #session.commit()
 
-        # per PEP-0249 a transaction is always in progress
-        session.commit()
         return json.dumps({'qid': qid, 'numFound': num_found}), 200
 
 
@@ -176,8 +174,6 @@ def store_data():
                 session.rollback()
                 return json.dumps({'msg': 'We have hit a db error! The world is crumbling all around... (eh, btw, your data was not saved)'}), 500
 
-            # per PEP-0249 a transaction is always in progress
-            session.commit()
             return d, 200
 
 

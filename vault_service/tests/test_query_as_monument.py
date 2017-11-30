@@ -28,11 +28,10 @@ class TestServices(TestCase):
                'TRAP_BAD_REQUEST_ERRORS': True
             })
         Base.query = a.db.session.query_property()
-        Base.metadata.create_all(bind=a.db.engine)
         return a
 
     def setUp(self):
-        self.app.db.create_all()
+        Base.metadata.create_all(bind=self.app.db.engine)
 
 
     def tearDown(self):

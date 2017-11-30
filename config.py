@@ -17,34 +17,3 @@ use_flask_db_url = True
 # just exposes it to bbb
 VAULT_BUMBLEBEE_OPTIONS = {}
 
-VAULT_LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'default': {
-            'format': '%(levelname)s\t%(process)d '
-                      '[%(asctime)s]:\t%(message)s',
-            'datefmt': '%m/%d/%Y %H:%M:%S',
-        }
-    },
-    'handlers': {
-        'file': {
-            'formatter': 'default',
-            'level': 'INFO',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': '/tmp/vault_service_app.log',
-        },
-        'console': {
-            'formatter': 'default',
-            'level': 'INFO',
-            'class': 'logging.StreamHandler'
-        },
-    },
-    'loggers': {
-        '': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    },
-}

@@ -29,8 +29,16 @@ class TestServices(TestCase):
                'TRAP_BAD_REQUEST_ERRORS': True
             })
         Base.query = a.db.session.query_property()
-        Base.metadata.create_all(bind=a.db.engine)
         return a
+
+    def setUp(self):
+        Base.metadata.create_all(bind=self.app.db.engine)
+
+
+    def tearDown(self):
+        self.app.db.session.remove()
+        self.app.db.drop_all()
+
 
 
     @httpretty.activate
