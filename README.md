@@ -1,7 +1,7 @@
-# myads
+# vault
 
-[![Travis Status](https://travis-ci.org/adsabs/myads.png?branch=master)](https://travis-ci.org/adsabs/myads)
-[![Coverage Status](https://coveralls.io/repos/adsabs/myads/badge.svg?branch=master)](https://coveralls.io/r/adsabs/myads?branch=master)
+[![Travis Status](https://travis-ci.org/adsabs/vault.png?branch=master)](https://travis-ci.org/adsabs/vault)
+[![Coverage Status](https://coveralls.io/repos/adsabs/vault/badge.svg?branch=master)](https://coveralls.io/r/adsabs/vault?branch=master)
 
 
 Microservice for storing queries, user preferences and stuff
@@ -11,14 +11,12 @@ Microservice for storing queries, user preferences and stuff
 (will wary based on the API deployment strategy) In minimal, you need to have a database and OAUTH_CLIENT_TOKEN
 
   * create database
-     create database myads;
-     alter database myads owner to myads;
+     create database vault;
+     alter database vault owner to vault;
 
-  * create modified myads_service/local_config.py, update (at least)
-  	MYADS_OAUTH_CLIENT_TOKEN = '.......'
-	SQLALCHEMY_BINDS = {
-	    'myads':        '.....'
-	}
+  * create modified vault_service/local_config.py, update (at least)
+  	VAULT_OAUTH_CLIENT_TOKEN = '.......'
+    SQLALCHEMY_DATABASE_URI = "....."
 
   * run `alembic upgrade head`
 
