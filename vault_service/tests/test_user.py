@@ -7,6 +7,7 @@ import json
 import httpretty
 import cgi
 from StringIO import StringIO
+import testing.postgresql
 
 project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_home not in sys.path:
@@ -19,10 +20,24 @@ from vault_service.views import utils
 class TestServices(TestCase):
     '''Tests that each route is an http response'''
 
+    postgresql_url_dict = {
+        'port': 1234,
+        'host': '127.0.0.1',
+        'user': 'postgres',
+        'database': 'test'
+    }
+    postgresql_url = 'postgresql://{user}@{host}:{port}/{database}' \
+        .format(
+        user=postgresql_url_dict['user'],
+        host=postgresql_url_dict['host'],
+        port=postgresql_url_dict['port'],
+        database=postgresql_url_dict['database']
+    )
+
     def create_app(self):
         '''Start the wsgi application'''
         a = app.create_app(**{
-               'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
+               'SQLALCHEMY_DATABASE_URI': self.postgresql_url,
                'SQLALCHEMY_ECHO': True,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,
@@ -30,6 +45,15 @@ class TestServices(TestCase):
             })
         Base.query = a.db.session.query_property()
         return a
+
+    @classmethod
+    def setUpClass(cls):
+        cls.postgresql = \
+            testing.postgresql.Postgresql(**cls.postgresql_url_dict)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.postgresql.stop()
 
     def setUp(self):
         Base.metadata.create_all(bind=self.app.db.engine)
@@ -209,6 +233,32 @@ class TestServices(TestCase):
 
         self.assertStatus(r, 200)
         self.assert_(r.json == {'foo': 'bar'}, 'missing data')
+
+        # save something else
+        r = self.client.post(url_for('user.store_data'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                             data=json.dumps({'db': 'testdb'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assert_(r.json['db'] == 'testdb', 'missing echo')
+
+        # modify it
+        r = self.client.post(url_for('user.store_data'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                             data=json.dumps({'db': 'testdb2'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assert_(r.json['db'] == 'testdb2', 'missing echo')
+
+        # get everything back
+        r = self.client.get(url_for('user.store_data'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb2'}, 'missing data')
 
 
 if __name__ == '__main__':

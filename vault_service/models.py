@@ -6,6 +6,7 @@
     Models for the users (users) of AdsWS
 """
 from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -16,7 +17,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
-    user_data = Column(LargeBinary)
+    user_data = Column(JSONB)
 
 
 

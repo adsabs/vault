@@ -2,7 +2,7 @@ VAULT_APP_SECRET_KEY = 'fake'
 VAULT_OAUTH_CLIENT_TOKEN = 'to be provided'
 VAULT_VERSION = 'v0.1' # Arbitrary string identifying the service (will be returned in the headers)
 
-SQLALCHEMY_DATABASE_URI = "sqlite:///"
+SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://postgres:postgres@localhost:5432/test_vault"
 SQLALCHEMY_ECHO = False
 
 # location of the remote solr-microservice

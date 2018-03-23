@@ -160,9 +160,21 @@ def store_data():
                 return '{}', 200 # or return 404?
             return q.user_data or '{}', 200
     elif request.method == 'POST':
-        d = json.dumps(payload)
+        # check if user record exists first
+        try:
+            with current_app.session_scope() as session:
+                q = session.query(User).filter_by(id=user_id).first()
+                data = json.loads(q.user_data)
+            for key in payload.keys():
+                # don't duplicate keys
+                data[key] = payload[key]
+            d = json.dumps(data)
+        except:
+            d = json.dumps(payload)
+
         if len(d) > MAX_ALLOWED_JSON_SIZE:
             return json.dumps({'msg': 'You have exceeded the allowed storage limit, no data was saved'}), 400
+
         u = User(id=user_id, user_data=d)
 
         with current_app.session_scope() as session:
