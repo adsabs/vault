@@ -5,19 +5,17 @@ from flask import request
 import json
 import md5
 import urlparse
-
+import pdb
 from sqlalchemy import exc
+from sqlalchemy.orm import exc as ormexc
 from ..models import Query, User
 from .utils import check_request, cleanup_payload, make_solr_request
 from flask_discoverer import advertise
 
 bp = Blueprint('user', __name__)
 
-# The database is storing data as BLOB so there is no (practical) limit
-# But we may want to be careful... the size is byte length; if used
-# database limits, the data could be inserted/truncated by the database
-# and corrupted
-MAX_ALLOWED_JSON_SIZE = 10000
+MAX_ALLOWED_JSON_SIZE = 1000
+MAX_ALLOWED_JSON_KEYS = 100
 
 @advertise(scopes=['store-query'], rate_limit = [300, 3600*24])
 @bp.route('/query', methods=['POST'])
@@ -160,24 +158,31 @@ def store_data():
                 return '{}', 200 # or return 404?
             return q.user_data or '{}', 200
     elif request.method == 'POST':
-        # check if user record exists first
-        try:
-            with current_app.session_scope() as session:
-                q = session.query(User).filter_by(id=user_id).first()
-                data = json.loads(q.user_data)
-            for key in payload.keys():
-                # don't duplicate keys
-                data[key] = payload[key]
-            d = json.dumps(data)
-        except:
-            d = json.dumps(payload)
-
-        if len(d) > MAX_ALLOWED_JSON_SIZE:
-            return json.dumps({'msg': 'You have exceeded the allowed storage limit, no data was saved'}), 400
-
-        u = User(id=user_id, user_data=d)
+        # limit both number of keys and length of value to keep db clean
+        if len(max(payload.values(), key=len)) > MAX_ALLOWED_JSON_SIZE:
+            return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
+        if len(payload.keys()) > MAX_ALLOWED_JSON_KEYS:
+            return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
 
         with current_app.session_scope() as session:
+            try:
+                q = session.query(User).filter_by(id=user_id).one()
+            except ormexc.NoResultFound:
+                d = json.dumps(payload)
+                u = User(id=user_id, user_data=d)
+                try:
+                    session.add(u)
+                    session.commit()
+                    return d, 200
+                except exc.IntegrityError:
+                    session.rollback()
+                    q = session.query(User).filter_by(id=user_id).one()
+
+            data = json.loads(q.user_data)
+            data.update(payload)
+            d = json.dumps(data)
+            u = User(id=user_id, user_data=d)
+
             session.begin_nested()
             try:
                 session.merge(u)
@@ -186,7 +191,7 @@ def store_data():
                 session.rollback()
                 return json.dumps({'msg': 'We have hit a db error! The world is crumbling all around... (eh, btw, your data was not saved)'}), 500
 
-            return d, 200
+        return d, 200
 
 
 
