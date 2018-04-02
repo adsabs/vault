@@ -17,3 +17,6 @@ use_flask_db_url = True
 # just exposes it to bbb
 VAULT_BUMBLEBEE_OPTIONS = {}
 
+# limits on the size of the JSON doc stored for user preferences
+MAX_ALLOWED_JSON_SIZE = 1000
+MAX_ALLOWED_JSON_KEYS = 100

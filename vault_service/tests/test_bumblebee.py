@@ -1,10 +1,8 @@
 import sys, os
 from urllib import urlencode
-from flask_testing import TestCase
 from flask import url_for, request
 import unittest
 import json
-import testing.postgresql
 
 project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_home not in sys.path:
@@ -12,23 +10,10 @@ if project_home not in sys.path:
 
 from vault_service import app
 from vault_service.models import Query, Institute, Library, Base
+from vault_service.tests.base import TestCaseDatabase
 
-class TestSite(TestCase):
+class TestSite(TestCaseDatabase):
     '''Tests that each route is an http response'''
-
-    postgresql_url_dict = {
-        'port': 1234,
-        'host': '127.0.0.1',
-        'user': 'postgres',
-        'database': 'test'
-    }
-    postgresql_url = 'postgresql://{user}@{host}:{port}/{database}' \
-        .format(
-        user=postgresql_url_dict['user'],
-        host=postgresql_url_dict['host'],
-        port=postgresql_url_dict['port'],
-        database=postgresql_url_dict['database']
-    )
 
     def create_app(self):
         '''Start the wsgi application'''
@@ -41,24 +26,6 @@ class TestSite(TestCase):
                'VAULT_BUMBLEBEE_OPTIONS': {'foo': 'bar'}
             })
         return a
-
-    @classmethod
-    def setUpClass(cls):
-        cls.postgresql = \
-            testing.postgresql.Postgresql(**cls.postgresql_url_dict)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.postgresql.stop()
-
-    def setUp(self):
-        Base.metadata.create_all(bind=self.app.db.engine)
-
-
-    def tearDown(self):
-        self.app.db.session.remove()
-        self.app.db.drop_all()
-
 
 
     def test_store_data(self):
@@ -78,22 +45,8 @@ class TestSite(TestCase):
                 content_type='application/json')
         self.assertStatus(r, 404)
 
-class TestOpenURL(TestCase):
+class TestOpenURL(TestCaseDatabase):
     '''Tests that each route is an http response'''
-
-    postgresql_url_dict = {
-        'port': 1234,
-        'host': '127.0.0.1',
-        'user': 'postgres',
-        'database': 'test'
-    }
-    postgresql_url = 'postgresql://{user}@{host}:{port}/{database}' \
-        .format(
-        user=postgresql_url_dict['user'],
-        host=postgresql_url_dict['host'],
-        port=postgresql_url_dict['port'],
-        database=postgresql_url_dict['database']
-    )
 
     def create_app(self):
         '''Start the wsgi application'''
@@ -105,17 +58,7 @@ class TestOpenURL(TestCase):
                'TRAP_BAD_REQUEST_ERRORS': True,
                'VAULT_BUMBLEBEE_OPTIONS': {'foo': 'bar'}
             })
-        Base.query = a.db.session.query_property()
         return a
-
-    @classmethod
-    def setUpClass(cls):
-        cls.postgresql = \
-            testing.postgresql.Postgresql(**cls.postgresql_url_dict)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.postgresql.stop()
 
     def setUp(self):
         Base.metadata.create_all(bind=self.app.db.engine)
@@ -139,9 +82,6 @@ class TestOpenURL(TestCase):
         self.app.db.session.add(self.library)
         self.app.db.session.commit()
 
-    def tearDown(self):
-        self.app.db.session.remove()
-        self.app.db.drop_all()
 
 
     def test_openurl_data(self):

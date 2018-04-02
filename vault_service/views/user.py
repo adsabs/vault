@@ -5,17 +5,15 @@ from flask import request
 import json
 import md5
 import urlparse
-import pdb
+
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
+from sqlalchemy.sql.functions import concat
 from ..models import Query, User
 from .utils import check_request, cleanup_payload, make_solr_request
 from flask_discoverer import advertise
 
 bp = Blueprint('user', __name__)
-
-MAX_ALLOWED_JSON_SIZE = 1000
-MAX_ALLOWED_JSON_KEYS = 100
 
 @advertise(scopes=['store-query'], rate_limit = [300, 3600*24])
 @bp.route('/query', methods=['POST'])
@@ -159,14 +157,19 @@ def store_data():
             return q.user_data or '{}', 200
     elif request.method == 'POST':
         # limit both number of keys and length of value to keep db clean
-        if len(max(payload.values(), key=len)) > MAX_ALLOWED_JSON_SIZE:
+        if len(max(payload.values(), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
             return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
-        if len(payload.keys()) > MAX_ALLOWED_JSON_KEYS:
+        if len(payload.keys()) > current_app.config['MAX_ALLOWED_JSON_KEYS']:
             return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
 
         with current_app.session_scope() as session:
             try:
-                q = session.query(User).filter_by(id=user_id).one()
+                q = session.query(User).filter_by(id=user_id).with_for_update(of=User)
+                r = session.query(User).filter_by(id=user_id).one()
+                try:
+                    data = json.loads(r.user_data)
+                except TypeError:
+                    data = {}
             except ormexc.NoResultFound:
                 d = json.dumps(payload)
                 u = User(id=user_id, user_data=d)
@@ -175,10 +178,13 @@ def store_data():
                     session.commit()
                     return d, 200
                 except exc.IntegrityError:
-                    session.rollback()
-                    q = session.query(User).filter_by(id=user_id).one()
+                    q = session.query(User).filter_by(id=user_id).with_for_update(of=User)
+                    r = session.query(User).filter_by(id=user_id).one()
+                    try:
+                        data = json.loads(r.user_data)
+                    except TypeError:
+                        data = {}
 
-            data = json.loads(q.user_data)
             data.update(payload)
             d = json.dumps(data)
             u = User(id=user_id, user_data=d)
