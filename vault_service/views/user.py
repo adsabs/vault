@@ -8,7 +8,6 @@ import urlparse
 
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
-from sqlalchemy.sql.functions import concat
 from ..models import Query, User
 from .utils import check_request, cleanup_payload, make_solr_request
 from flask_discoverer import advertise
@@ -164,10 +163,9 @@ def store_data():
 
         with current_app.session_scope() as session:
             try:
-                q = session.query(User).filter_by(id=user_id).with_for_update(of=User)
-                r = session.query(User).filter_by(id=user_id).one()
+                q = session.query(User).filter_by(id=user_id).with_for_update(of=User).one()
                 try:
-                    data = json.loads(r.user_data)
+                    data = json.loads(q.user_data)
                 except TypeError:
                     data = {}
             except ormexc.NoResultFound:
@@ -178,10 +176,9 @@ def store_data():
                     session.commit()
                     return d, 200
                 except exc.IntegrityError:
-                    q = session.query(User).filter_by(id=user_id).with_for_update(of=User)
-                    r = session.query(User).filter_by(id=user_id).one()
+                    q = session.query(User).filter_by(id=user_id).with_for_update(of=User).one()
                     try:
-                        data = json.loads(r.user_data)
+                        data = json.loads(q.user_data)
                     except TypeError:
                         data = {}
 
