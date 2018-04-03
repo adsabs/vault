@@ -1,6 +1,5 @@
 import sys, os
 from urllib import urlencode
-from flask_testing import TestCase
 from flask import url_for, request
 import unittest
 import json
@@ -12,34 +11,12 @@ project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
-from vault_service import app
-from vault_service.models import Query, Base
+from vault_service.models import Query
 from vault_service.views import utils
+from vault_service.tests.base import TestCaseDatabase
 
-class TestServices(TestCase):
+class TestServices(TestCaseDatabase):
     '''Tests that each route is an http response'''
-
-    def create_app(self):
-        '''Start the wsgi application'''
-        a = app.create_app(**{
-               'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
-               'SQLALCHEMY_ECHO': True,
-               'TESTING': True,
-               'PROPAGATE_EXCEPTIONS': True,
-               'TRAP_BAD_REQUEST_ERRORS': True
-            })
-        Base.query = a.db.session.query_property()
-        return a
-
-    def setUp(self):
-        Base.metadata.create_all(bind=self.app.db.engine)
-
-
-    def tearDown(self):
-        self.app.db.session.remove()
-        self.app.db.drop_all()
-
-
 
     @httpretty.activate
     def test_query_storage(self):
@@ -209,6 +186,32 @@ class TestServices(TestCase):
 
         self.assertStatus(r, 200)
         self.assert_(r.json == {'foo': 'bar'}, 'missing data')
+
+        # save something else
+        r = self.client.post(url_for('user.store_data'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                             data=json.dumps({'db': 'testdb'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assert_(r.json['db'] == 'testdb', 'missing echo')
+
+        # modify it
+        r = self.client.post(url_for('user.store_data'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                             data=json.dumps({'db': 'testdb2'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assert_(r.json['db'] == 'testdb2', 'missing echo')
+
+        # get everything back
+        r = self.client.get(url_for('user.store_data'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb2'}, 'missing data')
 
 
 if __name__ == '__main__':

@@ -1,6 +1,5 @@
 import sys, os
 from urllib import urlencode
-from flask_testing import TestCase
 from flask import url_for, request
 import unittest
 import json
@@ -11,14 +10,15 @@ if project_home not in sys.path:
 
 from vault_service import app
 from vault_service.models import Query, Institute, Library, Base
+from vault_service.tests.base import TestCaseDatabase
 
-class TestSite(TestCase):
+class TestSite(TestCaseDatabase):
     '''Tests that each route is an http response'''
 
     def create_app(self):
         '''Start the wsgi application'''
         a = app.create_app(**{
-               'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
+               'SQLALCHEMY_DATABASE_URI': self.postgresql_url,
                'SQLALCHEMY_ECHO': True,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,
@@ -26,15 +26,6 @@ class TestSite(TestCase):
                'VAULT_BUMBLEBEE_OPTIONS': {'foo': 'bar'}
             })
         return a
-
-    def setUp(self):
-        Base.metadata.create_all(bind=self.app.db.engine)
-
-
-    def tearDown(self):
-        self.app.db.session.remove()
-        self.app.db.drop_all()
-
 
 
     def test_store_data(self):
@@ -54,20 +45,19 @@ class TestSite(TestCase):
                 content_type='application/json')
         self.assertStatus(r, 404)
 
-class TestOpenURL(TestCase):
+class TestOpenURL(TestCaseDatabase):
     '''Tests that each route is an http response'''
 
     def create_app(self):
         '''Start the wsgi application'''
         a = app.create_app(**{
-               'SQLALCHEMY_DATABASE_URI': 'sqlite:///',
+               'SQLALCHEMY_DATABASE_URI': self.postgresql_url,
                'SQLALCHEMY_ECHO': True,
                'TESTING': True,
                'PROPAGATE_EXCEPTIONS': True,
                'TRAP_BAD_REQUEST_ERRORS': True,
                'VAULT_BUMBLEBEE_OPTIONS': {'foo': 'bar'}
             })
-        Base.query = a.db.session.query_property()
         return a
 
     def setUp(self):
@@ -92,9 +82,6 @@ class TestOpenURL(TestCase):
         self.app.db.session.add(self.library)
         self.app.db.session.commit()
 
-    def tearDown(self):
-        self.app.db.session.remove()
-        self.app.db.drop_all()
 
 
     def test_openurl_data(self):

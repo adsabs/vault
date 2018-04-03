@@ -5,40 +5,16 @@ project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
-from flask_testing import TestCase
 from flask import url_for, request
 import unittest
 import json
 import httpretty
 import cgi
 from StringIO import StringIO
-from vault_service.models import Base
+from vault_service.tests.base import TestCaseDatabase
 
-class TestServices(TestCase):
+class TestServices(TestCaseDatabase):
     '''Tests that each route is an http response'''
-
-    def create_app(self):
-        '''Start the wsgi application'''
-        from vault_service import app
-        a = app.create_app(**{
-               'SQLALCHEMY_DATABASE_URI': 'sqlite://',
-               'SQLALCHEMY_ECHO': False,
-               'TESTING': True,
-               'PROPAGATE_EXCEPTIONS': True,
-               'TRAP_BAD_REQUEST_ERRORS': True
-            })
-        Base.query = a.db.session.query_property()
-        return a
-
-    def setUp(self):
-        Base.metadata.create_all(bind=self.app.db.engine)
-
-
-    def tearDown(self):
-        self.app.db.session.remove()
-        self.app.db.drop_all()
-
-
 
     def test_ResourcesRoute(self):
         '''Tests for the existence of a /resources route, and that it returns properly formatted JSON data'''
