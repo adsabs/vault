@@ -21,11 +21,11 @@ def upgrade():
                     existing_type=sa.LargeBinary,
                     type_=postgresql.JSONB,
                     existing_nullable=True,
-                    postgresql_using="encode(user_data::bytea, 'escape')::jsonb")
+                    postgresql_using="convert_from(user_data,'utf-8')::jsonb")
 
 def downgrade():
     op.alter_column('users', 'user_data',
                     existing_type=postgresql.JSONB,
                     type_=sa.LargeBinary,
                     existing_nullable=True,
-                    postgresql_using="decode(user_data::text, 'escape')")
+                    postgresql_using="convert_to(user_data::text,'utf-8')")
