@@ -153,7 +153,7 @@ def store_data():
             q = session.query(User).filter_by(id=user_id).first()
             if not q:
                 return '{}', 200 # or return 404?
-            return q.user_data or '{}', 200
+            return json.dumps(q.user_data) or '{}', 200
     elif request.method == 'POST':
         # limit both number of keys and length of value to keep db clean
         if len(max(payload.values(), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
@@ -165,36 +165,34 @@ def store_data():
             try:
                 q = session.query(User).filter_by(id=user_id).with_for_update(of=User).one()
                 try:
-                    data = json.loads(q.user_data)
+                    data = q.user_data
                 except TypeError:
                     data = {}
             except ormexc.NoResultFound:
-                d = json.dumps(payload)
-                u = User(id=user_id, user_data=d)
+                data = payload
+                u = User(id=user_id, user_data=data)
                 try:
                     session.add(u)
                     session.commit()
-                    return d, 200
+                    return json.dumps(data), 200
                 except exc.IntegrityError:
                     q = session.query(User).filter_by(id=user_id).with_for_update(of=User).one()
                     try:
-                        data = json.loads(q.user_data)
+                        data = q.user_data
                     except TypeError:
                         data = {}
 
             data.update(payload)
-            d = json.dumps(data)
-            u = User(id=user_id, user_data=d)
+            q.user_data = data
 
             session.begin_nested()
             try:
-                session.merge(u)
                 session.commit()
             except exc.IntegrityError:
                 session.rollback()
                 return json.dumps({'msg': 'We have hit a db error! The world is crumbling all around... (eh, btw, your data was not saved)'}), 500
 
-        return d, 200
+        return json.dumps(data), 200
 
 
 

@@ -8,6 +8,7 @@
 from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.mutable import MutableDict
 
 
 Base = declarative_base()
@@ -17,7 +18,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
-    user_data = Column(JSONB)
+    user_data = Column(MutableDict.as_mutable(JSONB))
 
 
 

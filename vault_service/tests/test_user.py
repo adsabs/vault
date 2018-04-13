@@ -196,6 +196,14 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
         self.assert_(r.json['db'] == 'testdb', 'missing echo')
 
+        # get it back
+        r = self.client.get(url_for('user.store_data'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb'}, 'missing data')
+
         # modify it
         r = self.client.post(url_for('user.store_data'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
