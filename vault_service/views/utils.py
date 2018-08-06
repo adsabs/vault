@@ -1,4 +1,3 @@
-import requests
 import urlparse
 import urllib
 
@@ -15,9 +14,9 @@ def make_solr_request(query, bigquery=None, headers=None):
     if bigquery:
         headers = dict(headers)
         headers['content-type'] = 'big-query/csv'
-        return requests.post(current_app.config['VAULT_SOLR_BIGQUERY_ENDPOINT'], params=query, headers=headers, data=bigquery)
+        return current_app.client.post(current_app.config['VAULT_SOLR_BIGQUERY_ENDPOINT'], params=query, headers=headers, data=bigquery)
     else:
-        return requests.get(current_app.config['VAULT_SOLR_QUERY_ENDPOINT'], params=query, headers=headers)
+        return current_app.client.get(current_app.config['VAULT_SOLR_QUERY_ENDPOINT'], params=query, headers=headers)
 
 
 def cleanup_payload(payload):
