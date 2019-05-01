@@ -9,6 +9,7 @@ from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignK
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableDict
+from adsmutils import UTCDateTime
 
 
 Base = declarative_base()
@@ -19,7 +20,8 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
     user_data = Column(MutableDict.as_mutable(JSONB))
-
+    created = Column(UTCDateTime)
+    updated = Column(UTCDateTime)
 
 
 class Query(Base):
@@ -28,8 +30,8 @@ class Query(Base):
     id = Column(Integer, primary_key=True)
     uid = Column(Integer, default=0)
     qid = Column(String(32))
-    created = Column(TIMESTAMP)
-    updated = Column(TIMESTAMP)
+    created = Column(UTCDateTime)
+    updated = Column(UTCDateTime)
     numfound = Column(Integer, default=0)
     category = Column(String(255), default='')
     query = Column(LargeBinary)

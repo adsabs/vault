@@ -14,9 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 import datetime
 
-from sqlalchemy.sql import table, column
-from sqlalchemy import String, Integer, Date
-from sqlalchemy_utils import URLType
+
 
 
 def upgrade():

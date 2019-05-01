@@ -11,6 +11,7 @@ from sqlalchemy.orm import exc as ormexc
 from ..models import Query, User
 from .utils import check_request, cleanup_payload, make_solr_request
 from flask_discoverer import advertise
+import adsmutils
 
 bp = Blueprint('user', __name__)
 
@@ -170,7 +171,7 @@ def store_data():
                     data = {}
             except ormexc.NoResultFound:
                 data = payload
-                u = User(id=user_id, user_data=data)
+                u = User(id=user_id, user_data=data, created=adsmutils.get_date())
                 try:
                     session.add(u)
                     session.commit()
@@ -184,6 +185,7 @@ def store_data():
 
             data.update(payload)
             q.user_data = data
+            q.updated = adsmutils.get_date()
 
             session.begin_nested()
             try:
