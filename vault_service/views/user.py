@@ -11,6 +11,7 @@ from sqlalchemy.orm import exc as ormexc
 from ..models import Query, User
 from .utils import check_request, cleanup_payload, make_solr_request
 from flask_discoverer import advertise
+from dateutil import parser
 import adsmutils
 
 bp = Blueprint('user', __name__)
@@ -171,7 +172,7 @@ def store_data():
                     data = {}
             except ormexc.NoResultFound:
                 data = payload
-                u = User(id=user_id, user_data=data, created=adsmutils.get_date())
+                u = User(id=user_id, user_data=data, created=adsmutils.get_date(), updated=adsmutils.get_date())
                 try:
                     session.add(u)
                     session.commit()
@@ -196,5 +197,66 @@ def store_data():
 
         return json.dumps(data), 200
 
+@advertise(scopes=['ads-consumer:myads'], rate_limit = [1000, 3600*24])
+@bp.route('/get-myads/<user_id>', methods=['GET'])
+def get_myads(user_id):
+    '''
+    Fetches a myADS profile for the pipeline for a given uid
+    '''
+
+    # takes a given uid, grabs the user_data field, checks for the myADS key - if present, grabs the appropriate
+    # queries from the queries table. Finally, returns the appropriate queries along w/ the rest of the setup from
+    # the dict (e.g. active, timing, etc.)
+
+    # TODO check rate limit
+
+    # notes on using the existing endpoints for myADS:
+    # on setup, BBB should use the /query POST for each query, then pass the qid's in the payload for /user-data
+    # on fetch, BBB should do a GET from /user-data, then pass the returned qid's in a GET to /query to get the query
+
+    # structure in vault:
+    # "myADS": [{"name": user-supplied name, "qid": ID from query table, "active": true/false, "frequency": 1-7 (daily) or 6 or 7 (Sat/Sun weekly)}]
+
+    with current_app.session_scope() as session:
+        u = session.query(User).filter_by(id=user_id).first()
+        if not u:
+            return '{}', 404
+        elif not u.user_data.has_key('myADS'):
+            return '{}', 404
+        else:
+            myADS = u.user_data['myADS']
+
+        myADS = [x for x in myADS if (x['active'] is True)]
+        for i in myADS:
+            q = session.query(Query).filter_by(id=i['qid']).first()
+            if q:
+               i['query'] = q.query
+
+    return json.dumps(myADS), 200
 
 
+@advertise(scopes=['ads-consumer:myads'], rate_limit = [1000, 3600*24])
+@bp.route('/myads-users/<iso_datestring>', methods=['GET'])
+def export(iso_datestring):
+    '''
+    Get the latest changes (as recorded in users table)
+        The optional argument latest_point is RFC3339, ie. '2008-09-03T20:56:35.450686Z'
+    '''
+    # TODO check rate limit
+    # TODO need to add a created/update field to users table
+
+    # inspired by orcid-service endpoint of same endpoint, checks the users table for profiles w/ a myADS setup that
+    # have been updated since a given date/time; returns these profiles to be added to the myADS processing
+
+    latest = parser.parse(iso_datestring) # ISO 8601
+    output = []
+    with current_app.session_scope() as session:
+        users = session.query(User).filter(User.updated >= latest) \
+            .order_by(User.updated.asc()) \
+            .all()
+
+        for user in users:
+            if user.user_data.has_key('myADS'):
+                output.append(user.id)
+
+    return json.dumps({'users': output}), 200

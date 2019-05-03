@@ -14,6 +14,7 @@ if project_home not in sys.path:
 from vault_service.models import Query
 from vault_service.views import utils
 from vault_service.tests.base import TestCaseDatabase
+import adsmutils
 
 class TestServices(TestCaseDatabase):
     '''Tests that each route is an http response'''
@@ -220,6 +221,38 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         self.assert_(r.json == {'foo': 'bar', 'db': 'testdb2'}, 'missing data')
+
+    def test_myads_retrieval(self):
+        '''Tests pipeline retrieval of myADS setup and users'''
+
+        now = adsmutils.get_date()
+
+        with self.app.session_scope() as session:
+            q = session.query(Query).first()
+
+            qid = q.id
+            query = q.query
+
+        r = self.client.post(url_for('user.store_data'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                             data=json.dumps({'foo': 'bar',
+                                              'myADS': [{'name': '1', 'qid': qid, 'active': True},
+                                                        {'name': '2', 'qid': qid, 'active': False}]}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assert_(r.json['foo'] == 'bar')
+
+        r = self.client.get(url_for('user.get_myads', user_id='2'),
+                            headers={'Authorization': 'secret'})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json, [{'name': '1', 'qid': qid, 'query': query, 'active': True}])
+
+        r = self.client.get(url_for('user.export', iso_datestring=now))
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json, {'users': [2]})
 
 
 if __name__ == '__main__':
