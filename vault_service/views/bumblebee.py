@@ -8,7 +8,7 @@ from flask.ext.discoverer import advertise
 
 bp = Blueprint('bumblebee', __name__)
 
-@advertise(scopes=[], rate_limit = [100, 3600*24])
+@advertise(scopes=[], rate_limit = [1200, 3600*24])
 @bp.route('/configuration', methods=['GET'])
 @bp.route('/configuration/<key>', methods=['GET'])
 def configuration(key=None):
