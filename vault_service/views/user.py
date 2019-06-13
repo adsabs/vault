@@ -129,7 +129,7 @@ def execute_query(queryid):
     return r.text, r.status_code
 
 
-@advertise(scopes=['store-preferences'], rate_limit = [100, 3600*24])
+@advertise(scopes=['store-preferences'], rate_limit = [1200, 3600*24])
 @bp.route('/user-data', methods=['GET', 'POST'])
 def store_data():
     '''Allows you to store/retrieve JSON data on the server side.
