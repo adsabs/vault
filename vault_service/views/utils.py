@@ -89,3 +89,16 @@ def check_request(request):
 
     return (payload, new_headers)
 
+def check_data(data, types={}):
+    if not isinstance(data, dict):
+        return False
+    if len(data) != len(types):
+        return False
+
+    for key in types:
+        if key not in data:
+            return False
+        if not isinstance(data[key], types[key]):
+            return False
+
+    return True

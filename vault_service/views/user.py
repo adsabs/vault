@@ -9,7 +9,7 @@ import urlparse
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
 from ..models import Query, User
-from .utils import check_request, cleanup_payload, make_solr_request
+from .utils import check_request, cleanup_payload, make_solr_request, check_data
 from flask_discoverer import advertise
 from dateutil import parser
 import adsmutils
@@ -162,6 +162,23 @@ def store_data():
             return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
         if len(payload.keys()) > current_app.config['MAX_ALLOWED_JSON_KEYS']:
             return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
+        payload_keys_lower = dict(zip(map(lambda x: x.lower(), payload.keys()), payload.keys()))
+        if 'myads' in payload_keys_lower:
+            vals = payload[payload_keys_lower['myads']]
+            if type(vals) != list:
+                return json.dumps({'msg': 'myADS settings should be stored as a list of dicts, no data was saved'}), 400
+            for v in vals:
+                if not isinstance(v, dict):
+                    return json.dumps({'msg': 'myADS settings should be stored as a list of dicts, no data was saved'}), 400
+                goodval = check_data(v, types=dict(name=basestring,
+                                                          qid=int,
+                                                          active=bool,
+                                                          stateful=bool,
+                                                          frequency=basestring))
+                if goodval is False:
+                    return json.dumps({'msg': 'Invalid keys or values passed in myADS setup, no data was saved'}), 400
+                if v['frequency'] not in ['daily', 'weekly']:
+                    return json.dumps({'msg': 'Invalid keys or values passed in myADS setup, no data was saved'}), 400
 
         with current_app.session_scope() as session:
             try:
@@ -227,10 +244,6 @@ def get_myads(user_id):
             myADS = u.user_data['myADS']
 
         myADS = [x for x in myADS if (x['active'] is True)]
-        for i in myADS:
-            q = session.query(Query).filter_by(id=i['qid']).first()
-            if q:
-               i['query'] = q.query
 
     return json.dumps(myADS), 200
 

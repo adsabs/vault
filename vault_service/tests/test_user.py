@@ -141,6 +141,34 @@ class TestServices(TestCaseDatabase):
                                    'bigquery': 'foo\nbar'})
         self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
 
+        r = utils.check_data({'name': 'test', 'query': 'test'}, types=dict(name=basestring,
+                                                                           qid=int,
+                                                                           active=bool,
+                                                                           stateful=bool,
+                                                                           frequency=basestring))
+        self.assertFalse(r)
+
+        r = utils.check_data({'name': 'test',
+                              'qid': 'bad int',
+                              'stateful': True,
+                              'active': False,
+                              'frequency': 'daily'}, types=dict(name=basestring,
+                                                                qid=int,
+                                                                active=bool,
+                                                                stateful=bool,
+                                                                frequency=basestring))
+        self.assertFalse(r)
+
+        r = utils.check_data({'name': 'test',
+                              'qid': 123,
+                              'stateful': True,
+                              'active': False,
+                              'frequency': 'daily'}, types=dict(name=basestring,
+                                                                qid=int,
+                                                                active=bool,
+                                                                stateful=bool,
+                                                                frequency=basestring))
+        self.assertTrue(r)
 
     def test_store_data(self):
         '''Tests the ability to store data'''
@@ -231,13 +259,12 @@ class TestServices(TestCaseDatabase):
             q = session.query(Query).first()
 
             qid = q.id
-            query = q.query
 
         r = self.client.post(url_for('user.store_data'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                              data=json.dumps({'foo': 'bar',
-                                              'myADS': [{'name': '1', 'qid': qid, 'active': True},
-                                                        {'name': '2', 'qid': qid, 'active': False}]}),
+                                              'myADS': [{'name': '1', 'qid': qid, 'active': True, 'stateful': True, 'frequency': 'daily'},
+                                                        {'name': '2', 'qid': qid, 'active': False, 'stateful': False, 'frequency': 'weekly'}]}),
                              content_type='application/json')
 
         self.assertStatus(r, 200)
@@ -247,7 +274,7 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, [{'name': '1', 'qid': qid, 'query': query, 'active': True}])
+        self.assertEquals(r.json, [{'name': '1', 'qid': qid, 'active': True, 'stateful': True, 'frequency': 'daily'}])
 
         r = self.client.get(url_for('user.export', iso_datestring=now))
 
