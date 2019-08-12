@@ -142,21 +142,10 @@ class TestServices(TestCaseDatabase):
         self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
 
         r = utils.check_data({'name': 'test', 'query': 'test'}, types=dict(name=basestring,
-                                                                           qid=int,
+                                                                           qid=basestring,
                                                                            active=bool,
                                                                            stateful=bool,
                                                                            frequency=basestring))
-        self.assertFalse(r)
-
-        r = utils.check_data({'name': 'test',
-                              'qid': 'bad int',
-                              'stateful': True,
-                              'active': False,
-                              'frequency': 'daily'}, types=dict(name=basestring,
-                                                                qid=int,
-                                                                active=bool,
-                                                                stateful=bool,
-                                                                frequency=basestring))
         self.assertFalse(r)
 
         r = utils.check_data({'name': 'test',
@@ -164,7 +153,18 @@ class TestServices(TestCaseDatabase):
                               'stateful': True,
                               'active': False,
                               'frequency': 'daily'}, types=dict(name=basestring,
-                                                                qid=int,
+                                                                qid=basestring,
+                                                                active=bool,
+                                                                stateful=bool,
+                                                                frequency=basestring))
+        self.assertFalse(r)
+
+        r = utils.check_data({'name': 'test',
+                              'qid': 'fake qid',
+                              'stateful': True,
+                              'active': False,
+                              'frequency': 'daily'}, types=dict(name=basestring,
+                                                                qid=basestring,
                                                                 active=bool,
                                                                 stateful=bool,
                                                                 frequency=basestring))
@@ -258,7 +258,7 @@ class TestServices(TestCaseDatabase):
         with self.app.session_scope() as session:
             q = session.query(Query).first()
 
-            qid = q.id
+            qid = q.qid
 
         r = self.client.post(url_for('user.store_data'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},

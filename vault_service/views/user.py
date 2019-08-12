@@ -97,7 +97,7 @@ def execute_query(queryid):
     with current_app.session_scope() as session:
         q = session.query(Query).filter_by(qid=queryid).first()
         if not q:
-            return json.dumps({msg: 'Query not found: ' + qid}), 404
+            return json.dumps({msg: 'Query not found: ' + queryid}), 404
         q_query = q.query
 
     try:
@@ -171,7 +171,7 @@ def store_data():
                 if not isinstance(v, dict):
                     return json.dumps({'msg': 'myADS settings should be stored as a list of dicts, no data was saved'}), 400
                 goodval = check_data(v, types=dict(name=basestring,
-                                                          qid=int,
+                                                          qid=basestring,
                                                           active=bool,
                                                           stateful=bool,
                                                           frequency=basestring))
@@ -232,7 +232,7 @@ def get_myads(user_id):
     # on fetch, BBB should do a GET from /user-data, then pass the returned qid's in a GET to /query to get the query
 
     # structure in vault:
-    # "myADS": [{"name": user-supplied name, "qid": ID from query table, "active": true/false, "frequency": 1-7 (daily) or 6 or 7 (Sat/Sun weekly)}]
+    # "myADS": [{"name": user-supplied name, "qid": QID from query table, "active": true/false, "frequency": "daily" or "weekly", "stateful": true/false}]
 
     with current_app.session_scope() as session:
         u = session.query(User).filter_by(id=user_id).first()
