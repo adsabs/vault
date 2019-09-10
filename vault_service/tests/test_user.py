@@ -11,7 +11,7 @@ project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
-from vault_service.models import Query
+from vault_service.models import Query, User, MyADS
 from vault_service.views import utils
 from vault_service.tests.base import TestCaseDatabase
 import adsmutils
@@ -145,29 +145,34 @@ class TestServices(TestCaseDatabase):
                                                                            qid=basestring,
                                                                            active=bool,
                                                                            stateful=bool,
-                                                                           frequency=basestring))
+                                                                           frequency=basestring,
+                                                                           type=basestring))
         self.assertFalse(r)
 
         r = utils.check_data({'name': 'test',
                               'qid': 123,
                               'stateful': True,
                               'active': False,
-                              'frequency': 'daily'}, types=dict(name=basestring,
-                                                                qid=basestring,
-                                                                active=bool,
-                                                                stateful=bool,
-                                                                frequency=basestring))
+                              'frequency': 'daily',
+                              'type': 'query'}, types=dict(name=basestring,
+                                                           qid=basestring,
+                                                           active=bool,
+                                                           stateful=bool,
+                                                           frequency=basestring,
+                                                           type=basestring))
         self.assertFalse(r)
 
         r = utils.check_data({'name': 'test',
                               'qid': 'fake qid',
                               'stateful': True,
                               'active': False,
+                              'type': 'template',
                               'frequency': 'daily'}, types=dict(name=basestring,
                                                                 qid=basestring,
                                                                 active=bool,
                                                                 stateful=bool,
-                                                                frequency=basestring))
+                                                                frequency=basestring,
+                                                                type=basestring))
         self.assertTrue(r)
 
     def test_store_data(self):
@@ -263,8 +268,8 @@ class TestServices(TestCaseDatabase):
         r = self.client.post(url_for('user.store_data'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                              data=json.dumps({'foo': 'bar',
-                                              'myADS': [{'name': '1', 'qid': qid, 'active': True, 'stateful': True, 'frequency': 'daily'},
-                                                        {'name': '2', 'qid': qid, 'active': False, 'stateful': False, 'frequency': 'weekly'}]}),
+                                              'myADS': [{'name': '1', 'qid': qid, 'active': True, 'stateful': True, 'frequency': 'daily', 'type': 'query'},
+                                                        {'name': '2', 'qid': qid, 'active': False, 'stateful': False, 'frequency': 'weekly', 'type': 'template'}]}),
                              content_type='application/json')
 
         self.assertStatus(r, 200)
@@ -274,12 +279,139 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, [{'name': '1', 'qid': qid, 'active': True, 'stateful': True, 'frequency': 'daily'}])
+        self.assertEquals(r.json, [{'name': '1', 'qid': qid, 'active': True, 'stateful': True, 'frequency': 'daily', 'type': 'query'}])
 
         r = self.client.get(url_for('user.export', iso_datestring=now))
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json, {'users': [2]})
+
+    def test_template_query(self):
+        '''Tests storage and retrieval of templated myADS queries'''
+
+        now = adsmutils.get_date()
+
+        with self.app.session_scope() as session:
+            r = session.query(User).filter_by(id=3).first()
+            self.assertIsNone(r, True)
+
+        r = self.client.post(url_for('user.store_myads'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             data=json.dumps({'data': 'keyword1 OR keyword2'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 400)
+
+        r = self.client.post(url_for('user.store_myads'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             data=json.dumps({'data': 123}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 400)
+
+        r = self.client.post(url_for('user.store_myads'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             data=json.dumps({'template': 'arxiv', 'classes': 'astro-ph', 'data': 'keyword1 OR keyword2'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 400)
+
+        r = self.client.post(url_for('user.store_myads'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             data=json.dumps({'template': 'keyword', 'data': 'keyword1 OR keyword2'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        qid = r.json['qid']
+
+        r = self.client.get(url_for('user.get_myads', user_id='3'),
+                            headers={'Authorization': 'secret'})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json, [{u'name': u'keyword1 OR keyword2',
+                                    u'qid': qid,
+                                    u'active': True,
+                                    u'stateful': False,
+                                    u'frequency': u'weekly',
+                                    u'type': u'template',
+                                    u'template': u'keyword',
+                                    u'data': {u'data': u'keyword1 OR keyword2'}}])
+
+        r = self.client.get(url_for('user.store_myads', queryid=qid),
+                            headers={'Authorization': 'secret'})
+
+        self.assertStatus(r, 400)
+
+        r = self.client.get(url_for('user.store_myads', queryid=qid),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json, [{u'name': u'keyword1 OR keyword2',
+                                    u'qid': qid,
+                                    u'active': True,
+                                    u'stateful': False,
+                                    u'frequency': u'weekly',
+                                    u'type': u'template'}])
+
+        r = self.client.delete(url_for('user.store_myads', queryid=qid),
+                               headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+
+        self.assertStatus(r, 204)
+
+        with self.app.session_scope() as session:
+            q = session.query(MyADS).filter_by(id=qid).first()
+            self.assertIsNone(q)
+
+        r = self.client.get(url_for('user.store_myads', queryid=qid),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json, [])
+
+        r = self.client.post(url_for('user.store_myads'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             data=json.dumps({'template': 'arxiv',
+                                              'data': 'keyword1 OR keyword2',
+                                              'classes': ['astro-ph']}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        qid = r.json['qid']
+
+        r = self.client.get(url_for('user.get_myads', user_id='3'),
+                            headers={'Authorization': 'secret'})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json, [{u'name': u'keyword1 OR keyword2 - Recent Papers',
+                                    u'qid': qid,
+                                    u'stateful': False,
+                                    u'type': u'template',
+                                    u'active': True,
+                                    u'frequency': u'daily',
+                                    u'template': u'arxiv',
+                                    u'data': {u'classes': [u'astro-ph'], u'data': u'keyword1 OR keyword2'}}])
+
+        r = self.client.post(url_for('user.store_myads'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             data=json.dumps({'template': 'arxiv',
+                                              'data': 'keyword1 OR keyword2 OR keyword3',
+                                              'classes': ['astro-ph'],
+                                              'qid': qid}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        r = self.client.get(url_for('user.get_myads', user_id='3'),
+                            headers={'Authorization': 'secret'})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json, [{u'name': u'keyword1 OR keyword2 OR keyword3 - Recent Papers',
+                                    u'qid': qid,
+                                    u'stateful': False,
+                                    u'type': u'template',
+                                    u'active': True,
+                                    u'frequency': u'daily',
+                                    u'template': u'arxiv',
+                                    u'data': {u'classes': [u'astro-ph'], u'data': u'keyword1 OR keyword2 OR keyword3'}}])
 
 
 if __name__ == '__main__':

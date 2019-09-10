@@ -14,6 +14,7 @@ from adsmutils import UTCDateTime
 
 Base = declarative_base()
 
+
 class User(Base):
     __tablename__ = 'users'
 
@@ -36,6 +37,7 @@ class Query(Base):
     category = Column(String(255), default='')
     query = Column(LargeBinary)
 
+
 class Institute(Base):
     __tablename__ = 'institute'
     id = Column(Integer, primary_key=True)
@@ -51,6 +53,7 @@ class Institute(Base):
         return '<Insitute, name: {0}, Ringgold ID: {1}, ADS ID: {2}>'\
             .format(self.canonical_name, self.ringgold_id, self.ads_id)
 
+
 class Library(Base):
     __tablename__ = 'library'
     id = Column(Integer, primary_key=True)
@@ -62,3 +65,12 @@ class Library(Base):
     def __repr__(self):
         return '<Library, name: {0}, OpenURL server: {1}, OpenURL icon: {2}>'\
             .format(self.libname,  self.libserver, self.iconurl)
+
+
+class MyADS(Base):
+    __tablename__ = 'myads'
+    id = Column(Integer, primary_key=True)
+    template = Column(String)
+    data = Column(MutableDict.as_mutable(JSONB))
+    created = Column(UTCDateTime)
+    updated = Column(UTCDateTime)
