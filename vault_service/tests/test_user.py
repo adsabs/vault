@@ -188,7 +188,7 @@ class TestServices(TestCaseDatabase):
 
         # no data
         r = self.client.get(url_for('user.store_data'),
-                headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
 
@@ -197,7 +197,7 @@ class TestServices(TestCaseDatabase):
 
         # try to save something broken (it has to be json)
         r = self.client.post(url_for('user.store_data'),
-                headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                 data=json.dumps({'foo': 'bar'})[0:-2],
                 content_type='application/json')
 
@@ -206,7 +206,7 @@ class TestServices(TestCaseDatabase):
 
         # save something
         r = self.client.post(url_for('user.store_data'),
-                headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
 
@@ -215,7 +215,7 @@ class TestServices(TestCaseDatabase):
 
         # get it back
         r = self.client.get(url_for('user.store_data'),
-                headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                 content_type='application/json')
 
         self.assertStatus(r, 200)
@@ -223,7 +223,7 @@ class TestServices(TestCaseDatabase):
 
         # save something else
         r = self.client.post(url_for('user.store_data'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                              data=json.dumps({'db': 'testdb'}),
                              content_type='application/json')
 
@@ -232,7 +232,7 @@ class TestServices(TestCaseDatabase):
 
         # get it back
         r = self.client.get(url_for('user.store_data'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                             content_type='application/json')
 
         self.assertStatus(r, 200)
@@ -240,7 +240,7 @@ class TestServices(TestCaseDatabase):
 
         # modify it
         r = self.client.post(url_for('user.store_data'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                              data=json.dumps({'db': 'testdb2'}),
                              content_type='application/json')
 
@@ -249,7 +249,7 @@ class TestServices(TestCaseDatabase):
 
         # get everything back
         r = self.client.get(url_for('user.store_data'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '1'},
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
                             content_type='application/json')
 
         self.assertStatus(r, 200)
@@ -265,26 +265,39 @@ class TestServices(TestCaseDatabase):
 
             qid = q.qid
 
-        r = self.client.post(url_for('user.store_data'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
-                             data=json.dumps({'foo': 'bar',
-                                              'myADS': [{'name': '1', 'qid': qid, 'active': True, 'stateful': True, 'frequency': 'daily', 'type': 'query'},
-                                                        {'name': '2', 'qid': qid, 'active': False, 'stateful': False, 'frequency': 'weekly', 'type': 'template'}]}),
+        r = self.client.post(url_for('user.store_myads'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             data=json.dumps({'name': 'Query 1', 'qid': qid, 'stateful': True, 'frequency': 'daily', 'type': 'query'}),
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json['foo'] == 'bar')
+        self.assert_(r.json['name'] == 'Query 1')
+        self.assertTrue(r.json['active'])
+        myads_id = r.json['id']
 
-        r = self.client.get(url_for('user.get_myads', user_id='2'),
+        r = self.client.put(url_for('user.store_myads', myads_id=myads_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                            data=json.dumps({'name': 'Query 1 - edited'}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json['name'], 'Query 1 - edited')
+
+        r = self.client.get(url_for('user.get_myads', user_id='3'),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, [{'name': '1', 'qid': qid, 'active': True, 'stateful': True, 'frequency': 'daily', 'type': 'query'}])
+        self.assertEquals(r.json[0]['name'], 'Query 1 - edited')
+        self.assertEquals(r.json[0]['qid'], qid)
+        self.assertTrue(r.json[0]['active'])
+        self.assertTrue(r.json[0]['stateful'])
+        self.assertEquals(r.json[0]['frequency'], 'daily')
+        self.assertEquals(r.json[0]['type'], 'query')
 
         r = self.client.get(url_for('user.export', iso_datestring=now))
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, {'users': [2]})
+        self.assertEquals(r.json, {'users': [3]})
 
     def test_template_query(self):
         '''Tests storage and retrieval of templated myADS queries'''
@@ -292,126 +305,143 @@ class TestServices(TestCaseDatabase):
         now = adsmutils.get_date()
 
         with self.app.session_scope() as session:
-            r = session.query(User).filter_by(id=3).first()
+            r = session.query(User).filter_by(id=4).first()
             self.assertIsNone(r, True)
 
+        # try to store a query with insufficient metadata
         r = self.client.post(url_for('user.store_myads'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                              data=json.dumps({'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
 
         self.assertStatus(r, 400)
 
+        # try to store a query with data keyword of the wrong type (also insufficient metadata)
         r = self.client.post(url_for('user.store_myads'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                              data=json.dumps({'data': 123}),
                              content_type='application/json')
 
         self.assertStatus(r, 400)
 
+        # try to store a query with the classes keyword of the wrong type
         r = self.client.post(url_for('user.store_myads'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
-                             data=json.dumps({'template': 'arxiv', 'classes': 'astro-ph', 'data': 'keyword1 OR keyword2'}),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             data=json.dumps({'type': 'template', 'template': 'arxiv', 'classes': 'astro-ph', 'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
 
         self.assertStatus(r, 400)
 
+        # store a query correctly
         r = self.client.post(url_for('user.store_myads'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
-                             data=json.dumps({'template': 'keyword', 'data': 'keyword1 OR keyword2'}),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             data=json.dumps({'type': 'template', 'template': 'keyword', 'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        qid = r.json['qid']
+        query_id = r.json['id']
 
-        r = self.client.get(url_for('user.get_myads', user_id='3'),
+        # test that the pipeline export works as expected
+        r = self.client.get(url_for('user.get_myads', user_id='4'),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, [{u'name': u'keyword1 OR keyword2',
-                                    u'qid': qid,
-                                    u'active': True,
-                                    u'stateful': False,
-                                    u'frequency': u'weekly',
-                                    u'type': u'template',
-                                    u'template': u'keyword',
-                                    u'data': {u'data': u'keyword1 OR keyword2'}}])
+        self.assertEquals(r.json[0]['id'], query_id)
+        self.assertEquals(r.json[0]['name'], 'keyword1 OR keyword2')
+        self.assertTrue(r.json[0]['active'])
+        self.assertFalse(r.json[0]['stateful'])
+        self.assertEquals(r.json[0]['frequency'], 'weekly')
+        self.assertEquals(r.json[0]['type'], 'template')
+        self.assertEquals(r.json[0]['template'], 'keyword')
+        self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2')
 
-        r = self.client.get(url_for('user.store_myads', queryid=qid),
+        # try to retrieve a query without a user ID in the headers
+        r = self.client.get(url_for('user.store_myads', myads_id=query_id),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 400)
 
-        r = self.client.get(url_for('user.store_myads', queryid=qid),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+        # successfully retrieve a query setup
+        r = self.client.get(url_for('user.store_myads', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, [{u'name': u'keyword1 OR keyword2',
-                                    u'qid': qid,
-                                    u'active': True,
-                                    u'stateful': False,
-                                    u'frequency': u'weekly',
-                                    u'type': u'template'}])
+        self.assertEquals(r.json['id'], query_id)
+        self.assertEquals(r.json['name'], 'keyword1 OR keyword2')
+        self.assertTrue(r.json['active'])
+        self.assertFalse(r.json['stateful'])
+        self.assertEquals(r.json['frequency'], 'weekly')
+        self.assertEquals(r.json['type'], 'template')
 
-        r = self.client.delete(url_for('user.store_myads', queryid=qid),
-                               headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+        # successfully delete the query setup
+        r = self.client.delete(url_for('user.store_myads', myads_id=query_id),
+                               headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 204)
 
+        # ensure the query is really deleted
         with self.app.session_scope() as session:
-            q = session.query(MyADS).filter_by(id=qid).first()
+            q = session.query(MyADS).filter_by(id=query_id).first()
             self.assertIsNone(q)
 
-        r = self.client.get(url_for('user.store_myads', queryid=qid),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+        # ensure the get returns the right status for a missing query
+        r = self.client.get(url_for('user.store_myads', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
-        self.assertStatus(r, 200)
-        self.assertEquals(r.json, [])
+        self.assertStatus(r, 404)
 
+        # save an arxiv template query successfully
         r = self.client.post(url_for('user.store_myads'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
-                             data=json.dumps({'template': 'arxiv',
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'arxiv',
                                               'data': 'keyword1 OR keyword2',
                                               'classes': ['astro-ph']}),
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        qid = r.json['qid']
+        query_id = r.json['id']
 
-        r = self.client.get(url_for('user.get_myads', user_id='3'),
+        # check the stored query via the pipeline export
+        r = self.client.get(url_for('user.get_myads', user_id='4'),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, [{u'name': u'keyword1 OR keyword2 - Recent Papers',
-                                    u'qid': qid,
-                                    u'stateful': False,
-                                    u'type': u'template',
-                                    u'active': True,
-                                    u'frequency': u'daily',
-                                    u'template': u'arxiv',
-                                    u'data': {u'classes': [u'astro-ph'], u'data': u'keyword1 OR keyword2'}}])
+        self.assertEquals(r.json[0]['id'], query_id)
+        self.assertEquals(r.json[0]['name'], 'keyword1 OR keyword2 - Recent Papers')
+        self.assertFalse(r.json[0]['stateful'])
+        self.assertEquals(r.json[0]['type'], 'template')
+        self.assertTrue(r.json[0]['active'])
+        self.assertEquals(r.json[0]['frequency'], 'daily')
+        self.assertEquals(r.json[0]['template'], 'arxiv')
+        self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2')
+        self.assertEquals(r.json[0]['classes'], [u'astro-ph'])
 
-        r = self.client.post(url_for('user.store_myads'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
-                             data=json.dumps({'template': 'arxiv',
-                                              'data': 'keyword1 OR keyword2 OR keyword3',
-                                              'classes': ['astro-ph'],
-                                              'qid': qid}),
-                             content_type='application/json')
+        # edit the stored query
+        r = self.client.put(url_for('user.store_myads', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            data=json.dumps({'type': 'template',
+                                             'template': 'arxiv',
+                                             'data': 'keyword1 OR keyword2 OR keyword3',
+                                             'classes': ['astro-ph']}),
+                            content_type='application/json')
 
         self.assertStatus(r, 200)
-        r = self.client.get(url_for('user.get_myads', user_id='3'),
+
+        # check the exported setup
+        r = self.client.get(url_for('user.get_myads', user_id='4'),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, [{u'name': u'keyword1 OR keyword2 OR keyword3 - Recent Papers',
-                                    u'qid': qid,
-                                    u'stateful': False,
-                                    u'type': u'template',
-                                    u'active': True,
-                                    u'frequency': u'daily',
-                                    u'template': u'arxiv',
-                                    u'data': {u'classes': [u'astro-ph'], u'data': u'keyword1 OR keyword2 OR keyword3'}}])
+        self.assertEquals(r.json[0]['id'], query_id)
+        self.assertEquals(r.json[0]['name'], 'keyword1 OR keyword2 OR keyword3 - Recent Papers')
+        self.assertFalse(r.json[0]['stateful'])
+        self.assertEquals(r.json[0]['type'], 'template')
+        self.assertTrue(r.json[0]['active'])
+        self.assertEquals(r.json[0]['frequency'], 'daily')
+        self.assertEquals(r.json[0]['template'], 'arxiv')
+        self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2 OR keyword3')
+        self.assertEquals(r.json[0]['classes'], ['astro-ph'])
 
 
 if __name__ == '__main__':

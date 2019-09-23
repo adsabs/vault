@@ -21,3 +21,9 @@ VAULT_BUMBLEBEE_OPTIONS = {}
 # limits on the size of the JSON doc stored for user preferences
 MAX_ALLOWED_JSON_SIZE = 1000
 MAX_ALLOWED_JSON_KEYS = 100
+
+# user_id for anonymous users - fix this
+BOOTSTRAP_USER_ID = None
+
+# import endpoints
+HARBOUR_MYADS_IMPORT_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/harbour/myads/classic/%s'

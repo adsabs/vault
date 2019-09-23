@@ -5,15 +5,18 @@
 
     Models for the users (users) of AdsWS
 """
-from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey, Boolean
+from sqlalchemy.dialects.postgresql import JSONB, ENUM, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableDict
-from adsmutils import UTCDateTime
+from adsmutils import UTCDateTime, get_date
 
 
 Base = declarative_base()
 
+myads_type = ENUM('template', 'query', name='myads_type')
+myads_template = ENUM('arxiv', 'citations', 'authors', 'keyword', name='myads_template')
+myads_frequency = ENUM('daily', 'weekly', name='myads_frequency')
 
 class User(Base):
     __tablename__ = 'users'
@@ -70,7 +73,15 @@ class Library(Base):
 class MyADS(Base):
     __tablename__ = 'myads'
     id = Column(Integer, primary_key=True)
-    template = Column(String)
-    data = Column(MutableDict.as_mutable(JSONB))
-    created = Column(UTCDateTime)
-    updated = Column(UTCDateTime)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    query_id = Column(Integer, ForeignKey('queries.id'), nullable=True)
+    type = Column(myads_type)
+    name = Column(String)
+    active = Column(Boolean)
+    stateful = Column(Boolean)
+    frequency = Column(myads_frequency)
+    template = Column(myads_template, nullable=True)
+    classes = Column(ARRAY(String), nullable=True)
+    data = Column(String, nullable=True)
+    created = Column(UTCDateTime, default=get_date)
+    updated = Column(UTCDateTime, default=get_date, onupdate=get_date)
