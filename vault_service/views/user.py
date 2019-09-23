@@ -9,7 +9,7 @@ import urlparse
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
 from ..models import Query, User, MyADS
-from .utils import check_request, cleanup_payload, make_solr_request, check_data
+from .utils import check_request, cleanup_payload, make_solr_request
 from flask_discoverer import advertise
 from dateutil import parser
 import adsmutils

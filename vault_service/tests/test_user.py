@@ -122,7 +122,6 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
         self.assertListEqual(r.json['responseHeader']['params']['q'], ['author:foo'])
 
-
     def test_query_utils(self):
 
         r = utils.cleanup_payload({'query': 'q=foo&fq=boo&foo=bar&boo=bar'})
@@ -140,40 +139,6 @@ class TestServices(TestCaseDatabase):
         r = utils.cleanup_payload({'query': {'q': 'foo', 'fq': '{!bitset}', 'foo': 'bar', 'boo': 'bar'},
                                    'bigquery': 'foo\nbar'})
         self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
-
-        r = utils.check_data({'name': 'test', 'query': 'test'}, types=dict(name=basestring,
-                                                                           qid=basestring,
-                                                                           active=bool,
-                                                                           stateful=bool,
-                                                                           frequency=basestring,
-                                                                           type=basestring))
-        self.assertFalse(r)
-
-        r = utils.check_data({'name': 'test',
-                              'qid': 123,
-                              'stateful': True,
-                              'active': False,
-                              'frequency': 'daily',
-                              'type': 'query'}, types=dict(name=basestring,
-                                                           qid=basestring,
-                                                           active=bool,
-                                                           stateful=bool,
-                                                           frequency=basestring,
-                                                           type=basestring))
-        self.assertFalse(r)
-
-        r = utils.check_data({'name': 'test',
-                              'qid': 'fake qid',
-                              'stateful': True,
-                              'active': False,
-                              'type': 'template',
-                              'frequency': 'daily'}, types=dict(name=basestring,
-                                                                qid=basestring,
-                                                                active=bool,
-                                                                stateful=bool,
-                                                                frequency=basestring,
-                                                                type=basestring))
-        self.assertTrue(r)
 
     def test_store_data(self):
         '''Tests the ability to store data'''
