@@ -159,9 +159,9 @@ def store_data():
     elif request.method == 'POST':
         # limit both number of keys and length of value to keep db clean
         if len(max(payload.values(), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
-            return None, 'You have exceeded the allowed storage limit (length of values), no data was saved', 400
+            return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
         if len(payload.keys()) > current_app.config['MAX_ALLOWED_JSON_KEYS']:
-            return None, 'You have exceeded the allowed storage limit (number of keys), no data was saved', 400
+            return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
 
         with current_app.session_scope() as session:
             try:
@@ -192,7 +192,7 @@ def store_data():
                 session.commit()
             except exc.IntegrityError:
                 session.rollback()
-                return None, 'We have hit a db error! The world is crumbling all around... (eh, btw, your data was not saved)', 500
+                return json.dumps({'msg': 'We have hit a db error! The world is crumbling all around... (eh, btw, your data was not saved)'}), 500
 
         return json.dumps(data), 200
 
