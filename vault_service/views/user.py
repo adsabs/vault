@@ -198,7 +198,7 @@ def store_data():
 
 
 @advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
-@bp.route('/notifications', methods=['POST'])
+@bp.route('/notifications', methods=['POST', 'GET'])
 @bp.route('/notifications/<myads_id>', methods=['GET', 'DELETE', 'PUT'])
 def store_myads(myads_id=None):
     '''
@@ -231,29 +231,50 @@ def store_myads(myads_id=None):
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
 
     if request.method == 'GET':
-        with current_app.session_scope() as session:
-            setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
-            if setup is None:
-                return '{}', 404
-            if setup.query_id is not None:
-                q = session.query(Query).filter_by(id=setup.query_id).first()
-                qid = q.qid
-            else:
-                qid = None
+        # detail-level view for a single setup
+        if myads_id:
+            with current_app.session_scope() as session:
+                setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
+                if setup is None:
+                    return '{}', 404
+                if setup.query_id is not None:
+                    q = session.query(Query).filter_by(id=setup.query_id).first()
+                    qid = q.qid
+                else:
+                    qid = None
 
-            output = {'id': setup.id,
-                      'name': setup.name,
-                      'qid': qid,
-                      'type': setup.type,
-                      'active': setup.active,
-                      'stateful': setup.stateful,
-                      'frequency': setup.frequency,
-                      'template': setup.template,
-                      'classes': setup.classes,
-                      'data': setup.data,
-                      'created': setup.created.isoformat(),
-                      'updated': setup.updated.isoformat()}
-            return json.dumps(output), 200
+                output = {'id': setup.id,
+                          'name': setup.name,
+                          'qid': qid,
+                          'type': setup.type,
+                          'active': setup.active,
+                          'stateful': setup.stateful,
+                          'frequency': setup.frequency,
+                          'template': setup.template,
+                          'classes': setup.classes,
+                          'data': setup.data,
+                          'created': setup.created.isoformat(),
+                          'updated': setup.updated.isoformat()}
+                return json.dumps(output), 200
+        # summary-level view of all setups (w/ condensed list of keywords returned)
+        else:
+            with current_app.session_scope() as session:
+                all_setups = session.query(MyADS).filter_by(user_id=user_id).order_by(MyADS.id.asc()).all()
+                if len(all_setups) == 0:
+                    return '{}', 404
+
+                output = []
+                for s in all_setups:
+                    o = {'id': s.id,
+                         'name': s.name,
+                         'type': s.type,
+                         'active': s.active,
+                         'frequency': s.frequency,
+                         'template': s.template,
+                         'created': s.created.isoformat()}
+                    output.append(o)
+
+                return json.dumps(output), 200
 
     elif request.method == 'DELETE':
         with current_app.session_scope() as session:
@@ -476,7 +497,7 @@ def get_myads(user_id):
 
     output = []
     with current_app.session_scope() as session:
-        setups = session.query(MyADS).filter_by(user_id=user_id).filter_by(active=True).all()
+        setups = session.query(MyADS).filter_by(user_id=user_id).filter_by(active=True).order_by(MyADS.id.asc()).all()
         if not setups:
             return '{}', 404
         for s in setups:

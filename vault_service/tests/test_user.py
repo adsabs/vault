@@ -230,6 +230,11 @@ class TestServices(TestCaseDatabase):
 
             qid = q.qid
 
+        r = self.client.get(url_for('user.store_myads'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+
+        self.assertStatus(r, 404)
+
         r = self.client.post(url_for('user.store_myads'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
                              data=json.dumps({'name': 'Query 1', 'qid': qid, 'stateful': True, 'frequency': 'daily', 'type': 'query'}),
@@ -256,6 +261,15 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['qid'], qid)
         self.assertTrue(r.json[0]['active'])
         self.assertTrue(r.json[0]['stateful'])
+        self.assertEquals(r.json[0]['frequency'], 'daily')
+        self.assertEquals(r.json[0]['type'], 'query')
+
+        r = self.client.get(url_for('user.store_myads'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json[0]['name'], 'Query 1 - edited')
+        self.assertTrue(r.json[0]['active'])
         self.assertEquals(r.json[0]['frequency'], 'daily')
         self.assertEquals(r.json[0]['type'], 'query')
 
@@ -408,6 +422,24 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2 OR keyword3')
         self.assertEquals(r.json[0]['classes'], ['astro-ph'])
 
+        # add a second query
+        r = self.client.post(url_for('user.store_myads'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'authors',
+                                              'data': 'author:"Kurtz, M."'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json['name'], 'Favorite Authors - Recent Papers')
+
+        # get all queries back
+        r = self.client.get(url_for('user.store_myads'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json[0]['name'], 'keyword1 OR keyword2 OR keyword3 - Recent Papers')
+        self.assertEquals(r.json[1]['name'], 'Favorite Authors - Recent Papers')
 
 if __name__ == '__main__':
     unittest.main()
