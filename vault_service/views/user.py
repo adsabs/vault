@@ -9,7 +9,7 @@ import urlparse
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
 from ..models import Query, User, MyADS
-from .utils import check_request, cleanup_payload, make_solr_request
+from .utils import check_request, cleanup_payload, make_solr_request, upsert_myads
 from flask_discoverer import advertise
 from dateutil import parser
 import adsmutils
@@ -547,3 +547,33 @@ def export(iso_datestring):
 
     output = list(set(output))
     return json.dumps({'users': output}), 200
+
+
+@advertise(scopes=['import-myads'], rate_limit=[1000, 3600*24])
+@bp.route('/myads-import', methods=['GET'])
+def import_myads():
+    '''
+
+    :return:
+    '''
+    try:
+        payload, headers = check_request(request)
+    except Exception as e:
+        return json.dumps({'msg': e.message or e.description}), 400
+
+    user_id = int(headers['X-Adsws-Uid'])
+
+    if user_id == 0:
+        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
+
+    r = current_app.client.get(current_app.config['HARBOUR_MYADS_IMPORT_ENDPOINT'] % user_id)
+
+    if r.status_code != 200:
+        return r.json(), r.status_code
+
+    # convert classic setup keys into new setups
+    existing_setups, new_setups = upsert_myads(classic_setups=r.json(), user_id=user_id)
+    setups = {'existing': existing_setups, 'new': new_setups}
+
+    return setups, 200
+

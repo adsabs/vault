@@ -122,24 +122,6 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
         self.assertListEqual(r.json['responseHeader']['params']['q'], ['author:foo'])
 
-    def test_query_utils(self):
-
-        r = utils.cleanup_payload({'query': 'q=foo&fq=boo&foo=bar&boo=bar'})
-        self.assert_(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
-
-        r = utils.cleanup_payload({'query': {'q': 'foo', 'fq': 'boo', 'foo': 'bar', 'boo': 'bar'}})
-        self.assert_(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
-
-        def test_exc():
-            utils.cleanup_payload({'query': {'q': 'foo', 'fq': 'boo', 'foo': 'bar', 'boo': 'bar'},
-                                   'bigquery': 'foo\nbar'})
-
-        self.assertRaises(Exception, test_exc)
-
-        r = utils.cleanup_payload({'query': {'q': 'foo', 'fq': '{!bitset}', 'foo': 'bar', 'boo': 'bar'},
-                                   'bigquery': 'foo\nbar'})
-        self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
-
     def test_store_data(self):
         '''Tests the ability to store data'''
 
