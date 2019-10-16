@@ -134,7 +134,7 @@ def upsert_myads(classic_setups, user_id):
         data = 'citations(author:"{0}, {1}")'.format(classic_setups.get('lastname', ''), classic_setups.get('firstname', ''))
         with current_app.session_scope() as session:
             try:
-                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data).first()
+                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data).one()
                 current_app.logger.info('User {0} already has myADS citations notifications '
                                         'setup with {1} {2}'.format(user_id,
                                                                     classic_setups.get('firstname', ''),
@@ -169,52 +169,70 @@ def upsert_myads(classic_setups, user_id):
         with current_app.session_scope() as session:
             if classic_setups.get('daily_t1,'):
                 data = parse_classic_keywords(classic_setups.get('daily_t1,'))
-                name = '{0} - Recent Papers'
+                name = '{0} - Recent Papers'.format(get_keyword_query_name(data))
                 try:
                     q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data)\
-                        .filter(classic_setups.get('groups') == all_(MyADS.classes))\
-                        .filter_by(template='arxiv').first()
+                        .filter(classic_setups.get('groups') == MyADS.classes)\
+                        .filter_by(template='arxiv').one()
                     current_app.logger.info('User {0} already has daily arxiv notifications '
                                             'with keywords {1}'.format(user_id, data))
                     existing_setups.append({'id': q.id, 'template': 'arxiv', 'name': q.name})
                 except ormexc.NoResultFound:
-                    pass
+                    setup = MyADS(user_id=user_id,
+                                  type='template',
+                                  template='arxiv',
+                                  name=name,
+                                  active=True,
+                                  stateful=False,
+                                  frequency='daily',
+                                  data=data,
+                                  classes=classic_setups.get('groups'))
+
+                    try:
+                        session.add(setup)
+                        session.flush()
+                        myads_id = setup.id
+                        session.commit()
+                        current_app.logger.info(
+                            'Added myADS arxiv notifications for user {0} with keywords {1} and classes'
+                            '{2}'.format(user_id, data, classic_setups.get('groups')))
+                    except exc.IntegrityError as e:
+                        session.rollback()
+                        return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
+
+                    new_setups.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name})
             else:
                 data = None
                 name = 'arXiv - Recent Papers'
                 try:
-                    import pdb
-                    pdb.set_trace()
                     q = session.query(MyADS).filter_by(user_id=user_id)\
-                        .filter(classic_setups.get('groups') == all_(MyADS.classes)).first()
+                        .filter(MyADS.classes == classic_setups.get('groups')).one()
                     current_app.logger.info('User {0} already has daily arxiv notifications for arxiv classes {1} '
                                             'with no keywords specified'.format(user_id, classic_setups.get('groups')))
                     existing_setups.append({'id': q.id, 'template': 'arxiv', 'name': q.name})
                 except ormexc.NoResultFound:
-                    pass
+                    setup = MyADS(user_id=user_id,
+                                  type='template',
+                                  template='arxiv',
+                                  name=name,
+                                  active=True,
+                                  stateful=False,
+                                  frequency='daily',
+                                  data=data,
+                                  classes=classic_setups.get('groups'))
 
-            setup = MyADS(user_id=user_id,
-                          type='template',
-                          template='arxiv',
-                          name=name,
-                          active=True,
-                          stateful=False,
-                          frequency='daily',
-                          data=data,
-                          classes=classic_setups.get('groups'))
+                    try:
+                        session.add(setup)
+                        session.flush()
+                        myads_id = setup.id
+                        session.commit()
+                        current_app.logger.info('Added myADS arxiv notifications for user {0} with keywords {1} and classes'
+                                                '{2}'.format(user_id, data, classic_setups.get('groups')))
+                    except exc.IntegrityError as e:
+                        session.rollback()
+                        return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
 
-            try:
-                session.add(setup)
-                session.flush()
-                myads_id = setup.id
-                session.commit()
-                current_app.logger.info('Added myADS arxiv notifications for user {0} with keywords {1} and classes'
-                                        '{2}'.format(user_id, data, classic_setups.get('groups')))
-            except exc.IntegrityError as e:
-                session.rollback()
-                return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
-
-            new_setups.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name})
+                    new_setups.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name})
 
     if classic_setups.get('phy_aut,') or classic_setups.get('pre_aut,') or classic_setups.get('ast_aut,'):
         # concatenate all authors (should this be split by collection? then import behavior would differ from standard)
@@ -222,25 +240,28 @@ def upsert_myads(classic_setups, user_id):
         if classic_setups.get('phy_aut,'):
             author_list = classic_setups.get('phy_aut,').split('\r\n')
             data = ' OR '.join(['author:"' + x + '"' for x in author_list])
-            if len(data_all) > 0:
-                data = ' OR ' + data
-            data_all += data
+            if data not in data_all:
+                if len(data_all) > 0:
+                    data = ' OR ' + data
+                data_all += data
         if classic_setups.get('pre_aut,'):
             author_list = classic_setups.get('pre_aut,').split('\r\n')
             data = ' OR '.join(['author:"' + x + '"' for x in author_list])
-            if len(data_all) > 0:
-                data = ' OR ' + data
-            data_all += data
+            if data not in data_all:
+                if len(data_all) > 0:
+                    data = ' OR ' + data
+                data_all += data
         if classic_setups.get('ast_aut,'):
             author_list = classic_setups.get('ast_aut,').split('\r\n')
             data = ' OR '.join(['author:"' + x + '"' for x in author_list])
-            if len(data_all) > 0:
-                data = ' OR ' + data
-            data_all += data
+            if data not in data_all:
+                if len(data_all) > 0:
+                    data = ' OR ' + data
+                data_all += data
 
         with current_app.session_scope() as session:
             try:
-                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data_all).first()
+                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data_all).one()
                 current_app.logger.info('User {0} already has author notifications set up for authors {1}'.
                                         format(user_id, data_all))
                 existing_setups.append({'id': q.id, 'template': 'authors', 'name': q.name})
@@ -300,7 +321,7 @@ def upsert_myads(classic_setups, user_id):
             for d in data_list:
                 try:
                     q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=d).\
-                        filter_by(template='keyword').first()
+                        filter_by(template='keyword').one()
                     current_app.logger.info('User {0} already has keyword notifications set up for keywords {1}'.
                                             format(user_id, d))
                     existing_setups.append({'id': q.id, 'template': 'keyword', 'name': q.name})
@@ -308,7 +329,7 @@ def upsert_myads(classic_setups, user_id):
                     setup = MyADS(user_id=user_id,
                                   type='template',
                                   template='keyword',
-                                  name=d,
+                                  name=get_keyword_query_name(d),
                                   active=True,
                                   stateful=False,
                                   frequency='weekly',
@@ -332,55 +353,51 @@ def upsert_myads(classic_setups, user_id):
     return existing_setups, new_setups
 
 
-# class ParseToDict(Transformer):
-#     @v_args(inline=True)
-#     def data_item(self, name, *numbers):
-#         return name.value, [n.value for n in numbers]
-#
-#     start = dict
-#
-#
-# class EvalExpressions(Transformer):
-#     def expr(self, args):
-#             return eval(args[0])
+def get_keyword_query_name(keywords):
+    """
+    For a given keyword string, return the first word or phrase, to be used in the query name
+    :param keywords: string of keywords
+    :return: first word or phrase
+    """
+    key_list = keywords.split(' ')
+    first = key_list[0]
+
+    if '"' in first:
+        phrase = first
+        i = 1
+        while '"' not in key_list[i]:
+            phrase = phrase + ' ' + key_list[i]
+            i += 1
+        first = phrase + ' ' + key_list[i]
+
+    if first != keywords:
+        first = first + ', etc.'
+
+    return first
+
+def parse_classic_keywords(query):
+    """
+    Wrapper function to parse the Classic keyword string and return a BBB-style keyword string
+
+    :param query: string; Classic-style keyword query
+    :return: string; BBB-style keyword query
+    """
+    clean_query = query.strip()
+    tree = _parse_classic_keywords_to_tree(clean_query)
+
+    v = TreeVisitor()
+    new_query = v.visit(tree).output
+
+    return new_query
 
 
-def parse_classic_keywords(data):
-    # write a parser (using lark?) to convert Classic-style keyword setups to BBB-style (e.g. Classic uses default
-    # OR, which has to be explicit in BBB (it uses default AND)
+def _parse_classic_keywords_to_tree(data):
+    """
+    Given a string of keywords from Classic, parse the query tree
 
-    # grammar1 = Lark(r"""
-    #
-    #         start: clause
-    #
-    #         clause.2: ("(" clause ")" query*)*
-    #             | query
-    #             | clause
-    #
-    #         query: (qterm | phrase | first_author | operator | prepend)+
-    #
-    #         prepend: /=/ | /\+/ | /\-/
-    #
-    #         first_author: "^" WORD
-    #
-    #         phrase: DOUBLE_QUOTED_STRING | SINGLE_QUOTED_STRING
-    #
-    #         DOUBLE_QUOTED_STRING  : /"[^"]*"/
-    #         SINGLE_QUOTED_STRING  : /'[^']*'/
-    #
-    #         operator: OPERATOR
-    #
-    #         OPERATOR.2: "and" | "AND" | "or" | "OR" | "not" | "NOT"
-    #
-    #         qterm: WORD -> qterm
-    #
-    #         %import common.WS
-    #         %import common.WORD
-    #
-    #         %ignore WS
-    #         %ignore /[\],\*]+/
-    #
-    #     """, parser="lalr")
+    :param data: string of Classic keywords
+    :return: parsed tree
+    """
 
     grammar = Lark(r"""
 
@@ -392,9 +409,9 @@ def parse_classic_keywords(data):
 
     query: qterm
     
-    qterm: anyterm -> qterm | phrase | prepend
+    qterm: anyterm -> qterm | phrase | PREPEND -> prepend
     
-    prepend.2: /=\w/
+    PREPEND.2: /=/ | /\+/ | /\-/
         
     phrase: DOUBLE_QUOTED_STRING | SINGLE_QUOTED_STRING
 
@@ -405,7 +422,7 @@ def parse_classic_keywords(data):
     
     operator: OPERATOR | NEWLINE
 
-    OPERATOR.2: "and" | "AND" | "or" | "OR" | "not" | "NOT" | "AND NOT" | "and not" | /,/ | /\+/ | /\-/
+    OPERATOR.2: "and" | "AND" | "or" | "OR" | "not" | "NOT" | "AND NOT" | "and not" | /,/ 
 
     %import common.LETTER
     %import common.ESCAPED_STRING
@@ -419,14 +436,15 @@ def parse_classic_keywords(data):
     """, parser="lalr")
 
     tree = grammar.parse(data)
-    # for i in tree.iter_subtrees_topdown():
-    #     print 'i: ' + i + ' data: ' + i.data + ' children: ' + i.children
-
-    #res = ParseToDict().transform(tree)
 
     return tree
 
+
 class TreeVisitor(Visitor):
+    """
+    Visitor class to transform the parsed tree into a BBB-style query.
+    The final constructed query is stored in v.visit(tree).output
+    """
     def start(self, node):
         out = []
         for x in node.children:
@@ -441,6 +459,7 @@ class TreeVisitor(Visitor):
     def clause(self, node):
         out = []
         ops = ['and', 'AND', 'or', 'OR', 'not', 'NOT', 'and not', 'AND NOT']
+        prepend = ['=', '+', '-']
         for x in node.children:
             if hasattr(x, 'output'):
                 out.append(getattr(x, 'output'))
@@ -452,13 +471,24 @@ class TreeVisitor(Visitor):
             else:
                 if output[i-1] in ops:
                     output.append(o)
-                elif o in ops:
+                elif output[i-1] in prepend:
+                    if i < 2:
+                        output[i-1] += o
+                    else:
+                        output[i-1] = 'OR ' + output[i-1] + o
+                    output.append('')
+                elif o in ops or o in prepend:
                     output.append(o)
                 else:
                     output.append('OR ' + o)
             i += 1
 
-        node.output = "({0})".format(' '.join(output))
+        output = [x for x in output if x != '']
+
+        if len(output) > 1:
+            node.output = "({0})".format(' '.join(output))
+        else:
+            node.output = "{0}".format(' '.join(output))
 
     def query(self, node):
         node.output = node.children[0].output
@@ -468,15 +498,12 @@ class TreeVisitor(Visitor):
 
     def anyterm(self, node):
         node.output = '{0}'.format(node.children[0].value.replace("'", "\'").replace('"', '\"').strip())
-        #print 'anyterm: ', node.output
 
     def phrase(self, node):
         node.output = node.children[0].value.strip()
-        #print 'phrase: ', node.output
 
     def prepend(self, node):
         node.output = node.children[0].value.strip()
-        #print 'prepend: ', node.output
 
     def operator(self, node):
         v = node.children[0].value
@@ -486,5 +513,3 @@ class TreeVisitor(Visitor):
             v = v
 
         node.output = v
-        #print 'operator: ', node.output
-

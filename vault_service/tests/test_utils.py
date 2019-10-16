@@ -37,76 +37,87 @@ class TestServices(TestCaseDatabase):
                                    'bigquery': 'foo\nbar'})
         self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
 
-    # def test_upsert_myads(self):
-    #     user_id = 5
-    #     classic_setup = {"ast_aut,": "Lockwood, G.",
-    #                      "ast_t1,": "photosphere\r\nchromosphere\r\n",
-    #                      "ast_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
-    #                      "email": "gwl@lowell.edi",
-    #                      "firstname": "",
-    #                      "groups": [
-    #                         "astro-ph"
-    #                      ],
-    #                      "id": 2060288,
-    #                      "lastname": "",
-    #                      "phy_aut,": "Lockwood, G.",
-    #                      "phy_t1,": "photosphere\r\nchromosphere\r\n",
-    #                      "phy_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
-    #                      "pre_aut,": "Lockwood, G.",
-    #                      "pre_t1,": "photosphere\r\nchromosphere\r\n",
-    #                      "pre_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\""
-    #                      }
-    #
-    #     utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
-    #
-    #     with self.app.session_scope() as session:
-    #         q = session.query(MyADS).filter_by(user_id=user_id).all()
-    #         import pdb
-    #         pdb.set_trace()
-    #
-    #     self.assertEquals(user_id,5)
+    def test_upsert_myads(self):
+        user_id = 5
+        classic_setup = {"ast_aut,": "Lockwood, G.",
+                         "ast_t1,": "photosphere\r\nchromosphere\r\n",
+                         "ast_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
+                         "email": "gwl@lowell.edi",
+                         "firstname": "",
+                         "groups": [
+                            "astro-ph"
+                         ],
+                         "id": 2060288,
+                         "lastname": "",
+                         "phy_aut,": "Lockwood, G.",
+                         "phy_t1,": "photosphere\r\nchromosphere\r\n",
+                         "phy_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
+                         "pre_aut,": "Lockwood, G.",
+                         "pre_t1,": "photosphere\r\nchromosphere\r\n",
+                         "pre_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\""
+                         }
 
-    # def test_parse_classic_keywords(self):
-    #     test_input = "LISA \"gravitational wave\" AND \"gravity wave\""
-    #
-    #     tree = utils.parse_classic_keywords(test_input)
-    #
-    #     import pdb
-    #     pdb.set_trace()
-    #
-    #     test_input = "+supernova -remnant -CBET"
+        existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
+
+        with self.app.session_scope() as session:
+            q = session.query(MyADS).filter_by(user_id=user_id).all()
+            self.assertEquals(len(q), 8)
+
+        self.assertEquals(len(existing_setups), 0)
+        self.assertEquals(len(new_setups), 8)
+        self.assertEquals(new_setups[6], {'id': 7, 'template': 'keyword', 'name': u'photosphere, etc.'})
+
+        user_id = 6
+        classic_setup = {"ast_t1,": "+accretion disks X-ray binaries \"ultra compact\" reflection monte carlo UCXB IMBH",
+                         "daily_t1,": "X-ray binaries accretion disk reflection AGN spectroscopy IMBH ULX ultraluminous pulsar M-sigma",
+                         "email": "fkoliopanos@irap.omp.eu",
+                         "firstname": "Filippos",
+                         "groups": [
+                            "astro-ph"
+                         ],
+                         "id": 1085441,
+                         "lastname": "Koliopanos"
+                         }
+
+        existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
+
+        with self.app.session_scope() as session:
+            q = session.query(MyADS).filter_by(user_id=user_id).all()
+            self.assertEquals(len(q), 3)
+
+        self.assertEquals(len(existing_setups), 0)
+        self.assertEquals(len(new_setups), 3)
+        self.assertEquals(new_setups[2], {'id': 11, 'template': 'keyword', 'name': u'(+accretion, etc.'})
+
+        existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
+
+        self.assertEquals(len(existing_setups), 3)
+        self.assertEquals(len(new_setups), 0)
 
     def test_parse(self):
-        for (test, expected) in [('one two', ''),
-                                 # ('one or two', ''),
-                                 # ('one not three', ''),
-                                 # ('(one)', ''),
-                                 # ('(one two)', ''),
-                                 # ('((one two))', ''),
-                                 # ('(((one two)))', ''),
-                                 # ('(one (two three))', ''),
-                                 # ('(one (two or three))', ''),
-                                 # ('(one (two or three and four))', ''),
-                                 ('((foo and bar) or (baz) or a or b or c)', ''),
-                                 ('LISA +\"gravitational wave\" AND \"gravity wave\"', ''),
-                                 (
-                                 "\"lattice green's function\",\"kepler's equation\",\"lattice green function\",\"kepler equation\",\"loop quantum gravity\",\"loop quantum cosmology\",\"random walk\",EJTP",
-                                 ''),
-                                 (
-                                 "+EUV coronal waves \r\n +Dimmings\r\nDimming Mass Evacuation\r\n+Eruption prominence",
-                                 ''),
-                                 (
-                                 '\"shell galaxies\" OR \"shell galaxy\" OR ((ripple OR ripples OR shells OR (tidal AND structure) OR (tidal AND structures) OR (tidal AND feature) OR (tidal AND features)) AND (galaxy OR galaxies))',
-                                 ''),
+        for (test, expected) in [('one two', '(one OR two)'),
+                                 ('one or two', 'one or two'),
+                                 ('one not three', 'one not three'),
+                                 ('(one)', 'one'),
+                                 ('(one two)', '(one OR two)'),
+                                 ('((one two))', '(one OR two)'),
+                                 ('(((one two)))', '(one OR two)'),
+                                 ('(one (two three))', '(one OR (two OR three))'),
+                                 ('(one (two or three))', '(one OR (two or three))'),
+                                 ('(one (two or three and four))', '(one OR (two or three and four))'),
+                                 ('((foo and bar) or (baz) or a or b or c)', '((foo and bar) or baz or a or b or c)'),
+                                 ('LISA +\"gravitational wave\" AND \"gravity wave\"', '(LISA OR +"gravitational wave") AND "gravity wave"'),
+                                 ("\"lattice green's function\",\"kepler's equation\",\"lattice green function\",\"kepler equation\",\"loop quantum gravity\",\"loop quantum cosmology\",\"random walk\",EJTP",
+                                  '"lattice green\'s function" OR "kepler\'s equation" OR "lattice green function" OR "kepler equation" OR "loop quantum gravity" OR "loop quantum cosmology" OR "random walk" OR EJTP'),
+                                 ("+EUV coronal waves \r\n +Dimmings\r\nDimming +Mass Evacuation\r\n+Eruption prominence",
+                                  '(+EUV OR coronal OR waves) OR +Dimmings OR (Dimming OR +Mass OR Evacuation) OR (+Eruption OR prominence)'),
+                                 ('\"shell galaxies\" OR \"shell galaxy\" OR ((ripple OR ripples OR shells OR (tidal AND structure) OR (tidal AND structures) OR (tidal AND feature) OR (tidal AND features)) AND (galaxy OR galaxies))',
+                                  '"shell galaxies" OR "shell galaxy" OR ((ripple OR ripples OR shells OR (tidal AND structure) OR (tidal AND structures) OR (tidal AND feature) OR (tidal AND features)) AND (galaxy OR galaxies))'),
                                  ]:
-            print 'query:', test
-            tree = utils.parse_classic_keywords(test)
 
-            # self.assertEquals(output, expected)
-
-            print tree.pretty(' ')
+            tree = utils._parse_classic_keywords_to_tree(test)
 
             v = utils.TreeVisitor()
-            import pdb
-            pdb.set_trace()
-            print 'new query: ', v.visit(tree).output
+            output = v.visit(tree).output
+
+            self.assertEquals(output, expected)

@@ -308,7 +308,7 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'keyword1 OR keyword2')
+        self.assertEquals(r.json[0]['name'], 'keyword1, etc.')
         self.assertTrue(r.json[0]['active'])
         self.assertFalse(r.json[0]['stateful'])
         self.assertEquals(r.json[0]['frequency'], 'weekly')
@@ -328,7 +328,7 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json['id'], query_id)
-        self.assertEquals(r.json['name'], 'keyword1 OR keyword2')
+        self.assertEquals(r.json['name'], 'keyword1, etc.')
         self.assertTrue(r.json['active'])
         self.assertFalse(r.json['stateful'])
         self.assertEquals(r.json['frequency'], 'weekly')
@@ -369,7 +369,7 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'keyword1 OR keyword2 - Recent Papers')
+        self.assertEquals(r.json[0]['name'], 'keyword1, etc. - Recent Papers')
         self.assertFalse(r.json[0]['stateful'])
         self.assertEquals(r.json[0]['type'], 'template')
         self.assertTrue(r.json[0]['active'])
@@ -395,7 +395,7 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'keyword1 OR keyword2 OR keyword3 - Recent Papers')
+        self.assertEquals(r.json[0]['name'], 'keyword1, etc. - Recent Papers')
         self.assertFalse(r.json[0]['stateful'])
         self.assertEquals(r.json[0]['type'], 'template')
         self.assertTrue(r.json[0]['active'])
@@ -420,7 +420,7 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['name'], 'keyword1 OR keyword2 OR keyword3 - Recent Papers')
+        self.assertEquals(r.json[0]['name'], 'keyword1, etc. - Recent Papers')
         self.assertEquals(r.json[1]['name'], 'Favorite Authors - Recent Papers')
 
 if __name__ == '__main__':

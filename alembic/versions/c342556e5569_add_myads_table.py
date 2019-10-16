@@ -32,7 +32,7 @@ def upgrade():
                     sa.Column('stateful', sa.Boolean(), nullable=False),
                     sa.Column('frequency', postgresql.ENUM('daily', 'weekly', name='myads_frequency'), nullable=False),
                     sa.Column('template', postgresql.ENUM('arxiv', 'citations', 'authors', 'keyword', name='myads_template'), nullable=False),
-                    sa.Column('classes', postgresql.ARRAY(sa.String()), nullable=True),
+                    sa.Column('classes', postgresql.ARRAY(sa.Text()), nullable=True),
                     sa.Column('data', sa.String(), nullable=True),
                     sa.Column('created', UTCDateTime),
                     sa.Column('updated', UTCDateTime),

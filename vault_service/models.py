@@ -5,7 +5,7 @@
 
     Models for the users (users) of AdsWS
 """
-from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey, Boolean, Text
 from sqlalchemy.dialects.postgresql import JSONB, ENUM, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableDict
@@ -81,7 +81,7 @@ class MyADS(Base):
     stateful = Column(Boolean)
     frequency = Column(myads_frequency)
     template = Column(myads_template, nullable=True)
-    classes = Column(ARRAY(String), nullable=True)
+    classes = Column(ARRAY(Text), nullable=True)
     data = Column(String, nullable=True)
     created = Column(UTCDateTime, default=get_date)
     updated = Column(UTCDateTime, default=get_date, onupdate=get_date)

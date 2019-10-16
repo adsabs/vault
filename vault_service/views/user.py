@@ -9,7 +9,7 @@ import urlparse
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
 from ..models import Query, User, MyADS
-from .utils import check_request, cleanup_payload, make_solr_request, upsert_myads
+from .utils import check_request, cleanup_payload, make_solr_request, upsert_myads, get_keyword_query_name
 from flask_discoverer import advertise
 from dateutil import parser
 import adsmutils
@@ -302,13 +302,13 @@ def store_myads(myads_id=None):
                     return json.dumps({'msg': 'Cannot edit template type'}), 400
                 # edit name to reflect potentially new data input
                 if payload.get('template', setup.template) == 'arxiv':
-                    setup.name = '{0} - Recent Papers'.format(payload.get('data', setup.data))
+                    setup.name = '{0} - Recent Papers'.format(get_keyword_query_name(payload.get('data', setup.data)))
                 elif payload.get('template', setup.template) == 'citations':
                     setup.name = '{0} - Citations'.format(payload.get('data', setup.data))
                 elif payload.get('template', setup.template) == 'authors':
                     setup.name = 'Favorite Authors - Recent Papers'
                 elif payload.get('template', setup.template) == 'keyword':
-                    setup.name = '{0}'.format(payload.get('data', setup.data))
+                    setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data)))
                 else:
                     return json.dumps({'msg': 'Wrong template type passed'}), 400
                 if not isinstance(payload.get('data', setup.data), basestring):
@@ -412,7 +412,7 @@ def store_myads(myads_id=None):
                 data = payload['data']
                 stateful = False
                 frequency = 'daily'
-                name = '{0} - Recent Papers'.format(payload['data'])
+                name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
             elif payload['template'] == 'citations':
                 template = 'citations'
                 classes = None
@@ -431,7 +431,7 @@ def store_myads(myads_id=None):
                 template = 'keyword'
                 classes = None
                 data = payload['data']
-                name = '{0}'.format(payload['data'])
+                name = '{0}'.format(get_keyword_query_name(payload['data']))
                 stateful = False
                 frequency = 'weekly'
             else:
