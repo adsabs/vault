@@ -212,12 +212,23 @@ class TestServices(TestCaseDatabase):
 
             qid = q.qid
 
-        r = self.client.get(url_for('user.store_myads'),
+        # make sure no setups exist
+        r = self.client.get(url_for('user.get_myads_notifications'),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
 
         self.assertStatus(r, 404)
 
-        r = self.client.post(url_for('user.store_myads'),
+        # try saving a query with bad data
+        r = self.client.post(url_for('user.create_myads_notification'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             data=json.dumps({'name': 'Query 1', 'qid': qid, 'stateful': True,
+                                              'frequency': 'bad data', 'type': 'query'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 400)
+
+        # save the query correctly
+        r = self.client.post(url_for('user.create_myads_notification'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
                              data=json.dumps({'name': 'Query 1', 'qid': qid, 'stateful': True, 'frequency': 'daily', 'type': 'query'}),
                              content_type='application/json')
@@ -227,7 +238,16 @@ class TestServices(TestCaseDatabase):
         self.assertTrue(r.json['active'])
         myads_id = r.json['id']
 
-        r = self.client.put(url_for('user.store_myads', myads_id=myads_id),
+        # edit the query with bad data
+        r = self.client.put(url_for('user.edit_myads_notification', myads_id=myads_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                            data=json.dumps({'name': 'Query 1 - edited', 'stateful': 'bad data'}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 400)
+
+        # edit the query correctly
+        r = self.client.put(url_for('user.edit_myads_notification', myads_id=myads_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
                             data=json.dumps({'name': 'Query 1 - edited'}),
                             content_type='application/json')
@@ -235,6 +255,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
         self.assertEquals(r.json['name'], 'Query 1 - edited')
 
+        # get all myADS setups via the pipeline endpoint
         r = self.client.get(url_for('user.get_myads', user_id='3'),
                             headers={'Authorization': 'secret'})
 
@@ -246,7 +267,8 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['frequency'], 'daily')
         self.assertEquals(r.json[0]['type'], 'query')
 
-        r = self.client.get(url_for('user.store_myads'),
+        # get all myADS setups via the BBB endpoint
+        r = self.client.get(url_for('user.get_myads_notifications'),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
 
         self.assertStatus(r, 200)
@@ -255,13 +277,27 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['frequency'], 'daily')
         self.assertEquals(r.json[0]['type'], 'query')
 
+        # fetch the active myADS users
         r = self.client.get(url_for('user.export', iso_datestring=now))
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json, {'users': [3]})
 
+    @httpretty.activate
     def test_template_query(self):
         '''Tests storage and retrieval of templated myADS queries'''
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('VAULT_SOLR_QUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+                    "responseHeader":{
+                    "status":0, "QTime":0,
+                    "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+                    "response":{"numFound":10456930,"start":0,"docs":[
+                      { "bibcode":"2005JGRC..110.4002G" },
+                      { "bibcode":"2005JGRC..110.4003N" },
+                      { "bibcode":"2005JGRC..110.4004Y" }]}}""")
 
         now = adsmutils.get_date()
 
@@ -270,7 +306,7 @@ class TestServices(TestCaseDatabase):
             self.assertIsNone(r, True)
 
         # try to store a query with insufficient metadata
-        r = self.client.post(url_for('user.store_myads'),
+        r = self.client.post(url_for('user.create_myads_notification'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                              data=json.dumps({'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
@@ -278,7 +314,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 400)
 
         # try to store a query with data keyword of the wrong type (also insufficient metadata)
-        r = self.client.post(url_for('user.store_myads'),
+        r = self.client.post(url_for('user.create_myads_notification'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                              data=json.dumps({'data': 123}),
                              content_type='application/json')
@@ -286,7 +322,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 400)
 
         # try to store a query with the classes keyword of the wrong type
-        r = self.client.post(url_for('user.store_myads'),
+        r = self.client.post(url_for('user.create_myads_notification'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                              data=json.dumps({'type': 'template', 'template': 'arxiv', 'classes': 'astro-ph', 'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
@@ -294,7 +330,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 400)
 
         # store a query correctly
-        r = self.client.post(url_for('user.store_myads'),
+        r = self.client.post(url_for('user.create_myads_notification'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                              data=json.dumps({'type': 'template', 'template': 'keyword', 'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
@@ -317,25 +353,25 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2')
 
         # try to retrieve a query without a user ID in the headers
-        r = self.client.get(url_for('user.store_myads', myads_id=query_id),
+        r = self.client.get(url_for('user.get_myads_notifications', myads_id=query_id),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 400)
 
         # successfully retrieve a query setup
-        r = self.client.get(url_for('user.store_myads', myads_id=query_id),
+        r = self.client.get(url_for('user.get_myads_notifications', myads_id=query_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json['id'], query_id)
-        self.assertEquals(r.json['name'], 'keyword1, etc.')
-        self.assertTrue(r.json['active'])
-        self.assertFalse(r.json['stateful'])
-        self.assertEquals(r.json['frequency'], 'weekly')
-        self.assertEquals(r.json['type'], 'template')
+        self.assertEquals(r.json[0]['id'], query_id)
+        self.assertEquals(r.json[0]['name'], 'keyword1, etc.')
+        self.assertTrue(r.json[0]['active'])
+        self.assertFalse(r.json[0]['stateful'])
+        self.assertEquals(r.json[0]['frequency'], 'weekly')
+        self.assertEquals(r.json[0]['type'], 'template')
 
         # successfully delete the query setup
-        r = self.client.delete(url_for('user.store_myads', myads_id=query_id),
+        r = self.client.delete(url_for('user.delete_myads_notification', myads_id=query_id),
                                headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 204)
@@ -346,13 +382,13 @@ class TestServices(TestCaseDatabase):
             self.assertIsNone(q)
 
         # ensure the get returns the right status for a missing query
-        r = self.client.get(url_for('user.store_myads', myads_id=query_id),
+        r = self.client.get(url_for('user.get_myads_notifications', myads_id=query_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 404)
 
         # save an arxiv template query successfully
-        r = self.client.post(url_for('user.store_myads'),
+        r = self.client.post(url_for('user.create_myads_notification'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'template': 'arxiv',
@@ -379,7 +415,7 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['classes'], [u'astro-ph'])
 
         # edit the stored query
-        r = self.client.put(url_for('user.store_myads', myads_id=query_id),
+        r = self.client.put(url_for('user.edit_myads_notification', myads_id=query_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                             data=json.dumps({'type': 'template',
                                              'template': 'arxiv',
@@ -405,7 +441,7 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['classes'], ['astro-ph'])
 
         # add a second query
-        r = self.client.post(url_for('user.store_myads'),
+        r = self.client.post(url_for('user.create_myads_notification'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'template': 'authors',
@@ -416,7 +452,7 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json['name'], 'Favorite Authors - Recent Papers')
 
         # get all queries back
-        r = self.client.get(url_for('user.store_myads'),
+        r = self.client.get(url_for('user.get_myads_notifications'),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)

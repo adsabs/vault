@@ -91,7 +91,7 @@ def check_request(request):
     if headers['Authorization']:
         new_headers['X-Forwarded-Authorization'] = headers['Authorization']
     new_headers['Authorization'] = 'Bearer:' + current_app.config['VAULT_OAUTH_CLIENT_TOKEN']
-    new_headers['X-Adsws-Uid'] = headers.get('X-Adsws-Uid', '0') # User ID
+    new_headers['X-Adsws-Uid'] = headers.get('X-Adsws-Uid', str(current_app.config['BOOTSTRAP_USER_ID'])) # User ID
 
     return (payload, new_headers)
 

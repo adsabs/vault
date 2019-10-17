@@ -147,7 +147,7 @@ def store_data():
 
     user_id = int(headers['X-Adsws-Uid'])
 
-    if user_id in [0, current_app.config['BOOTSTRAP_USER_ID']]:
+    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
 
     if request.method == 'GET':
@@ -198,28 +198,12 @@ def store_data():
 
 
 @advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
-@bp.route('/notifications', methods=['POST', 'GET'])
-@bp.route('/notifications/<myads_id>', methods=['GET', 'DELETE', 'PUT'])
-def store_myads(myads_id=None):
-    '''
-    Stores templated myADS setup
-    :return:
-    '''
-
-    # BBB provides (for templated notifications):
-    # arXiv: keywords, arXiv categories
-    #   payload structure: {'type': 'template', 'template': 'arxiv', 'classes': ['class1','class2'], 'data': 'keyword 1 OR keyword2'}
-    # citations: author name or ORCID ID (with author: or orcid: tag)
-    #   payload structure: {'type': 'template', 'template': 'citations', 'data': 'author:XXX OR orcid:XXX'}
-    # favorite authors: author names or ORCID IDs (with author: or orcid: tag)
-    #   payload structure: {'type': 'template', 'template': 'authors', 'data': 'author:XXX OR orcid:XXX'}
-    # keywords: keywords
-    #   payload structure: {'type': 'template', 'template': 'keyword', 'data': 'keyword1 OR keyword2'} (templates: citations, authors, keyword)
-    #                      {'type': 'template', 'template': 'keyword', classes: 'astro-ph', 'data': 'keyword1 OR keyword2'} (templates: arxiv)
-    # BBB provides (for query notifications):
-    # qid (from queries table, return from call to /query), name, stateful, frequency, type=query
-    # payload structure: {'type': 'query', 'name': name of query, 'qid': return from /query call, 'stateful': True/False, 'frequency': 'daily'/'weekly'}
-
+@bp.route('/notifications', methods=['POST'])
+def create_myads_notification():
+    """
+    Create a new myADS notification
+    :return: json, details of new setup
+    """
     try:
         payload, headers = check_request(request)
     except Exception as e:
@@ -227,120 +211,168 @@ def store_myads(myads_id=None):
 
     user_id = int(headers['X-Adsws-Uid'])
 
-    if user_id in [0, current_app.config['BOOTSTRAP_USER_ID']]:
+    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
 
-    if request.method == 'GET':
-        # detail-level view for a single setup
-        if myads_id:
-            with current_app.session_scope() as session:
-                setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
-                if setup is None:
-                    return '{}', 404
-                if setup.query_id is not None:
-                    q = session.query(Query).filter_by(id=setup.query_id).first()
-                    qid = q.qid
-                else:
-                    qid = None
+    # check payload
+    try:
+        ntype = payload['type']
+    except KeyError:
+        return json.dumps({'msg': 'No notification type passed'}), 400
 
-                output = {'id': setup.id,
-                          'name': setup.name,
-                          'qid': qid,
-                          'type': setup.type,
-                          'active': setup.active,
-                          'stateful': setup.stateful,
-                          'frequency': setup.frequency,
-                          'template': setup.template,
-                          'classes': setup.classes,
-                          'data': setup.data,
-                          'created': setup.created.isoformat(),
-                          'updated': setup.updated.isoformat()}
-                return json.dumps(output), 200
-        # summary-level view of all setups (w/ condensed list of keywords returned)
-        else:
-            with current_app.session_scope() as session:
-                all_setups = session.query(MyADS).filter_by(user_id=user_id).order_by(MyADS.id.asc()).all()
-                if len(all_setups) == 0:
-                    return '{}', 404
-
-                output = []
-                for s in all_setups:
-                    o = {'id': s.id,
-                         'name': s.name,
-                         'type': s.type,
-                         'active': s.active,
-                         'frequency': s.frequency,
-                         'template': s.template,
-                         'created': s.created.isoformat()}
-                    output.append(o)
-
-                return json.dumps(output), 200
-
-    elif request.method == 'DELETE':
-        with current_app.session_scope() as session:
-            r = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
-            if not r:
-                return '{}', 404
+    with current_app.session_scope() as session:
+        try:
+            q = session.query(User).filter_by(id=user_id).one()
+        except ormexc.NoResultFound:
+            u = User(id=user_id)
             try:
-                session.delete(r)
+                session.add(u)
                 session.commit()
             except exc.IntegrityError as e:
                 session.rollback()
-                return json.dumps({'msg': 'Query was not deleted'}), 500
-            return '{}', 204
+                return json.dumps({'msg': 'User does not exist, so new myADS setup was not saved, error: {0}'.
+                                  format(e)}), 500
 
-    elif request.method == 'PUT':
+    if ntype == 'query':
+        if not all(k in payload for k in ('qid', 'name', 'stateful', 'frequency')):
+            return json.dumps({'msg': 'Bad data passed'}), 400
+        with current_app.session_scope() as session:
+            qid = payload.get('qid')
+            q = session.query(Query).filter_by(qid=qid).first()
+            if not q:
+                return json.dumps({'msg': 'Query does not exist'}), 404
+            query_id = q.id
+            setup = MyADS(user_id=user_id,
+                          type='query',
+                          query_id=query_id,
+                          name=payload.get('name'),
+                          active=True,
+                          stateful=payload.get('stateful'),
+                          frequency=payload.get('frequency'))
+
+    elif ntype == 'template':
+        if 'template' not in payload:
+            return json.dumps({'msg': 'Bad data passed'}), 400
+
+        if not isinstance(payload.get('data'), basestring):
+            return json.dumps({'msg': 'Bad data passed'}), 400
+
+        if payload['template'] == 'arxiv':
+            if not isinstance(payload.get('classes'), list):
+                return json.dumps({'msg': 'Bad data passed'}), 400
+            if not set(payload.get('classes')).issubset(set(current_app.config['ALLOWED_ARXIV_CLASSES'])):
+                return json.dumps({'msg': 'Bad data passed'}), 400
+
+        # verify data/query
+        solrq = payload['data'] + '&wt=json'
+        r = make_solr_request(query=solrq, headers=headers)
+        if r.status_code != 200:
+            return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
+
+        # add metadata
+        if payload['template'] == 'arxiv':
+            template = 'arxiv'
+            classes = payload['classes']
+            data = payload['data']
+            stateful = False
+            frequency = 'daily'
+            name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
+        elif payload['template'] == 'citations':
+            template = 'citations'
+            classes = None
+            data = payload['data']
+            stateful = True
+            frequency = 'weekly'
+            name = '{0} - Citations'.format(payload['data'])
+        elif payload['template'] == 'authors':
+            template = 'authors'
+            classes = None
+            data = payload['data']
+            stateful = True
+            frequency = 'weekly'
+            name = 'Favorite Authors - Recent Papers'
+        elif payload['template'] == 'keyword':
+            template = 'keyword'
+            classes = None
+            data = payload['data']
+            name = '{0}'.format(get_keyword_query_name(payload['data']))
+            stateful = False
+            frequency = 'weekly'
+        else:
+            return json.dumps({'msg': 'Wrong template type passed'}), 400
+
+        setup = MyADS(user_id=user_id,
+                      type='template',
+                      name=name,
+                      active=True,
+                      stateful=stateful,
+                      frequency=frequency,
+                      template=template,
+                      classes=classes,
+                      data=data)
+    else:
+        return json.dumps({'msg': 'Bad data passed'}), 400
+
+    # update/store the template query data, get a qid back
+    with current_app.session_scope() as session:
+        try:
+            session.add(setup)
+            session.flush()
+            # qid is an int in the myADS table
+            myads_id = setup.id
+            session.commit()
+        except exc.StatementError as e:
+            session.rollback()
+            return json.dumps({'msg': 'Invalid data type passed, new myADS setup was not saved. Error: {0}'.format(e)}), 400
+        except exc.IntegrityError as e:
+            session.rollback()
+            return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
+
+        output = {'id': myads_id,
+                  'name': setup.name,
+                  'qid': payload.get('qid', None),
+                  'type': setup.type,
+                  'active': setup.active,
+                  'stateful': setup.stateful,
+                  'frequency': setup.frequency,
+                  'template': setup.template,
+                  'classes': setup.classes,
+                  'data': setup.data,
+                  'created': setup.created.isoformat(),
+                  'updated': setup.updated.isoformat()}
+
+    return json.dumps(output), 200
+
+@advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
+@bp.route('/notifications', methods=['GET'])
+@bp.route('/notifications/<myads_id>', methods=['GET'])
+def get_myads_notifications(myads_id=None):
+    """
+    Get one or all myADS notifications set up for a given user
+    :param myads_id: ID of a single notification, if only one is desired
+    :return: list of json, details of one or all setups
+    """
+    try:
+        payload, headers = check_request(request)
+    except Exception as e:
+        return json.dumps({'msg': e.message or e.description}), 400
+
+    user_id = int(headers['X-Adsws-Uid'])
+
+    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
+        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
+
+    # detail-level view for a single setup
+    if myads_id:
         with current_app.session_scope() as session:
             setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
             if setup is None:
                 return '{}', 404
-            # type/template/qid shouldn't be edited as they're fundamental constraints - delete & re-add if needed
-            if payload.get('type', setup.type) != setup.type:
-                return json.dumps({'msg': 'Cannot edit notification type'}), 400
-            if payload.get('type', setup.type) == 'template':
-                if setup.template != payload.get('template', setup.template):
-                    return json.dumps({'msg': 'Cannot edit template type'}), 400
-                # edit name to reflect potentially new data input
-                if payload.get('template', setup.template) == 'arxiv':
-                    setup.name = '{0} - Recent Papers'.format(get_keyword_query_name(payload.get('data', setup.data)))
-                elif payload.get('template', setup.template) == 'citations':
-                    setup.name = '{0} - Citations'.format(payload.get('data', setup.data))
-                elif payload.get('template', setup.template) == 'authors':
-                    setup.name = 'Favorite Authors - Recent Papers'
-                elif payload.get('template', setup.template) == 'keyword':
-                    setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data)))
-                else:
-                    return json.dumps({'msg': 'Wrong template type passed'}), 400
-                if not isinstance(payload.get('data', setup.data), basestring):
-                    return json.dumps({'msg': 'Bad data passed'}), 400
-                setup.data = payload.get('data', setup.data)
-                if payload.get('template', setup.template) == 'arxiv':
-                    if not isinstance(payload.get('classes', setup.classes), list):
-                        return json.dumps({'msg': 'Bad data passed'}), 400
-                    setup.classes = payload.get('classes', setup.classes)
+            if setup.query_id is not None:
+                q = session.query(Query).filter_by(id=setup.query_id).first()
+                qid = q.qid
+            else:
                 qid = None
-            if payload.get('type', setup.type) == 'query':
-                qid = payload.get('qid', None)
-                if qid:
-                    q = session.query(Query).filter_by(qid=qid).first()
-                    if q.id != setup.query_id:
-                        return json.dumps({'msg': 'Cannot edit the qid'}), 400
-                else:
-                    q = session.query(Query).filter_by(id=setup.query_id).first()
-                    qid = q.qid
-                # name can be edited in query-type setups
-                setup.name = payload.get('name', setup.name)
-            # edit setup as necessary from the payload
-            setup.active = payload.get('active', setup.active)
-            setup.stateful = payload.get('stateful', setup.stateful)
-            setup.frequency = payload.get('frequency', setup.frequency)
-
-            session.begin_nested()
-            try:
-                session.commit()
-            except exc.IntegrityError:
-                session.rollback()
-                return json.dumps({'msg': 'There was an error saving the updated setup'}), 500
 
             output = {'id': setup.id,
                       'name': setup.name,
@@ -355,126 +387,159 @@ def store_myads(myads_id=None):
                       'created': setup.created.isoformat(),
                       'updated': setup.updated.isoformat()}
 
-        return json.dumps(output), 200
+            return json.dumps([output]), 200
 
-    elif request.method == 'POST':
-        # check payload
-        try:
-            ntype = payload['type']
-        except KeyError:
-            return json.dumps({'msg': 'No notification type passed'}), 400
-
+    # summary-level view of all setups (w/ condensed list of keywords returned)
+    else:
         with current_app.session_scope() as session:
-            try:
-                q = session.query(User).filter_by(id=user_id).one()
-            except ormexc.NoResultFound:
-                u = User(id=user_id)
-                try:
-                    session.add(u)
-                    session.commit()
-                except exc.IntegrityError as e:
-                    session.rollback()
-                    return json.dumps({'msg': 'User does not exist, so new myADS setup was not saved, error: {0}'.
-                                      format(e)}), 500
+            all_setups = session.query(MyADS).filter_by(user_id=user_id).order_by(MyADS.id.asc()).all()
+            if len(all_setups) == 0:
+                return '{}', 404
 
-        if ntype == 'query':
-            if not all(k in payload for k in ('qid', 'name', 'stateful', 'frequency')):
-                return json.dumps({'msg': 'Bad data passed'}), 400
-            with current_app.session_scope() as session:
-                qid = payload.get('qid')
-                q = session.query(Query).filter_by(qid=qid).first()
-                if not q:
-                    return json.dumps({'msg': 'Query does not exist'}), 404
-                query_id = q.id
-                setup = MyADS(user_id=user_id,
-                              type='query',
-                              query_id=query_id,
-                              name=payload.get('name'),
-                              active=True,
-                              stateful=payload.get('stateful'),
-                              frequency=payload.get('frequency'))
+            output = []
+            for s in all_setups:
+                o = {'id': s.id,
+                     'name': s.name,
+                     'type': s.type,
+                     'active': s.active,
+                     'frequency': s.frequency,
+                     'template': s.template,
+                     'created': s.created.isoformat()}
+                output.append(o)
 
-        elif ntype == 'template':
-            if 'template' not in payload:
-                return json.dumps({'msg': 'Bad data passed'}), 400
+            return json.dumps(output), 200
 
-            if not isinstance(payload.get('data'), basestring):
-                return json.dumps({'msg': 'Bad data passed'}), 400
+@advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
+@bp.route('/notifications/<myads_id>', methods=['DELETE'])
+def delete_myads_notification(myads_id=None):
+    """
+    Delete a single myADS notification setup
+    :param myads_id: ID of a single notification
+    :return: none
+    """
+    try:
+        payload, headers = check_request(request)
+    except Exception as e:
+        return json.dumps({'msg': e.message or e.description}), 400
 
-            if payload['template'] == 'arxiv':
-                if not isinstance(payload.get('classes'), list):
-                    return json.dumps({'msg': 'Bad data passed'}), 400
+    user_id = int(headers['X-Adsws-Uid'])
 
-            # add metadata
-            if payload['template'] == 'arxiv':
-                template = 'arxiv'
-                classes = payload['classes']
-                data = payload['data']
-                stateful = False
-                frequency = 'daily'
-                name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
-            elif payload['template'] == 'citations':
-                template = 'citations'
-                classes = None
-                data = payload['data']
-                stateful = True
-                frequency = 'weekly'
-                name = '{0} - Citations'.format(payload['data'])
-            elif payload['template'] == 'authors':
-                template = 'authors'
-                classes = None
-                data = payload['data']
-                stateful = True
-                frequency = 'weekly'
-                name = 'Favorite Authors - Recent Papers'
-            elif payload['template'] == 'keyword':
-                template = 'keyword'
-                classes = None
-                data = payload['data']
-                name = '{0}'.format(get_keyword_query_name(payload['data']))
-                stateful = False
-                frequency = 'weekly'
+    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
+        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
+
+    with current_app.session_scope() as session:
+        r = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
+        if not r:
+            return '{}', 404
+        try:
+            session.delete(r)
+            session.commit()
+        except exc.IntegrityError as e:
+            session.rollback()
+            return json.dumps({'msg': 'Query was not deleted'}), 500
+        return '{}', 204
+
+@advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
+@bp.route('/notifications/<myads_id>', methods=['PUT'])
+def edit_myads_notification(myads_id=None):
+    """
+    Edit a single myADS notification setup
+    :param myads_id: ID of a single notification
+    :return: json, details of edited setup
+    """
+    try:
+        payload, headers = check_request(request)
+    except Exception as e:
+        return json.dumps({'msg': e.message or e.description}), 400
+
+    user_id = int(headers['X-Adsws-Uid'])
+
+    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
+        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
+
+    # verify data/query
+    if payload.get('data', None):
+        solrq = payload['data'] + '&wt=json'
+        r = make_solr_request(query=solrq, headers=headers)
+        if r.status_code != 200:
+            return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
+
+    with current_app.session_scope() as session:
+        setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
+        if setup is None:
+            return '{}', 404
+        # type/template/qid shouldn't be edited as they're fundamental constraints - delete & re-add if needed
+        if payload.get('type', setup.type) != setup.type:
+            return json.dumps({'msg': 'Cannot edit notification type'}), 400
+        if payload.get('type', setup.type) == 'template':
+            if setup.template != payload.get('template', setup.template):
+                return json.dumps({'msg': 'Cannot edit template type'}), 400
+            # edit name to reflect potentially new data input
+            if payload.get('template', setup.template) == 'arxiv':
+                setup.name = '{0} - Recent Papers'.format(get_keyword_query_name(payload.get('data', setup.data)))
+            elif payload.get('template', setup.template) == 'citations':
+                setup.name = '{0} - Citations'.format(payload.get('data', setup.data))
+            elif payload.get('template', setup.template) == 'authors':
+                setup.name = 'Favorite Authors - Recent Papers'
+            elif payload.get('template', setup.template) == 'keyword':
+                setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data)))
             else:
                 return json.dumps({'msg': 'Wrong template type passed'}), 400
+            if not isinstance(payload.get('data', setup.data), basestring):
+                return json.dumps({'msg': 'Bad data passed'}), 400
+            setup.data = payload.get('data', setup.data)
+            if payload.get('template', setup.template) == 'arxiv':
+                if not isinstance(payload.get('classes', setup.classes), list):
+                    return json.dumps({'msg': 'Bad data passed'}), 400
+                if not set(payload.get('classes')).issubset(set(current_app.config['ALLOWED_ARXIV_CLASSES'])):
+                    return json.dumps({'msg': 'Bad data passed'}), 400
+                setup.classes = payload.get('classes', setup.classes)
+            qid = None
+        if payload.get('type', setup.type) == 'query':
+            qid = payload.get('qid', None)
+            if qid:
+                q = session.query(Query).filter_by(qid=qid).first()
+                if q.id != setup.query_id:
+                    return json.dumps({'msg': 'Cannot edit the qid'}), 400
+            else:
+                q = session.query(Query).filter_by(id=setup.query_id).first()
+                qid = q.qid
+            # name can be edited in query-type setups
+            setup.name = payload.get('name', setup.name)
+        # edit setup as necessary from the payload
+        setup.active = payload.get('active', setup.active)
+        setup.stateful = payload.get('stateful', setup.stateful)
+        setup.frequency = payload.get('frequency', setup.frequency)
 
-            setup = MyADS(user_id=user_id,
-                          type='template',
-                          name=name,
-                          active=True,
-                          stateful=stateful,
-                          frequency=frequency,
-                          template=template,
-                          classes=classes,
-                          data=data)
-        else:
-            return json.dumps({'msg': 'Bad data passed'}), 400
+        try:
+            session.begin_nested()
+        except exc.StatementError as e:
+            session.rollback()
+            return json.dumps({'msg': 'Invalid data type passed, new myADS setup was not saved. Error: {0}'.format(e)}), 400
 
-        # update/store the template query data, get a qid back
-        with current_app.session_scope() as session:
-            try:
-                session.add(setup)
-                session.flush()
-                # qid is an int in the myADS table
-                myads_id = setup.id
-                session.commit()
-            except exc.IntegrityError as e:
-                session.rollback()
-                return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
+        try:
+            session.commit()
+        except exc.StatementError as e:
+            session.rollback()
+            return json.dumps({'msg': 'Invalid data type passed, new myADS setup was not saved. Error: {0}'.format(e)}), 400
+        except exc.IntegrityError:
+            session.rollback()
+            return json.dumps({'msg': 'There was an error saving the updated setup'}), 500
 
-            output = {'id': myads_id,
-                      'name': setup.name,
-                      'qid': payload.get('qid', None),
-                      'type': setup.type,
-                      'active': setup.active,
-                      'stateful': setup.stateful,
-                      'frequency': setup.frequency,
-                      'template': setup.template,
-                      'classes': setup.classes,
-                      'data': setup.data,
-                      'created': setup.created.isoformat(),
-                      'updated': setup.updated.isoformat()}
+        output = {'id': setup.id,
+                  'name': setup.name,
+                  'qid': qid,
+                  'type': setup.type,
+                  'active': setup.active,
+                  'stateful': setup.stateful,
+                  'frequency': setup.frequency,
+                  'template': setup.template,
+                  'classes': setup.classes,
+                  'data': setup.data,
+                  'created': setup.created.isoformat(),
+                  'updated': setup.updated.isoformat()}
 
-        return json.dumps(output), 200
+    return json.dumps(output), 200
 
 
 @advertise(scopes=['ads-consumer:myads'], rate_limit = [1000, 3600*24])
@@ -514,8 +579,11 @@ def get_myads(user_id):
                  'updated': s.updated.isoformat()}
 
             if s.type == 'query':
-                q = session.query(Query).filter_by(id=s.query_id).first()
-                qid = q.qid
+                try:
+                    q = session.query(Query).filter_by(id=s.query_id).one()
+                    qid = q.qid
+                except ormexc.NoResultFound:
+                    qid = None
             else:
                 qid = None
             o['qid'] = qid
