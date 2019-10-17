@@ -23,7 +23,7 @@ MAX_ALLOWED_JSON_SIZE = 1000
 MAX_ALLOWED_JSON_KEYS = 100
 
 # user_id for anonymous users - fix in deployment config
-BOOTSTRAP_USER_ID = None
+BOOTSTRAP_USER_ID = 0
 
 # import endpoints
 HARBOUR_MYADS_IMPORT_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/harbour/myads/classic/%s'
