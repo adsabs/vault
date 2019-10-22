@@ -94,6 +94,19 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(len(existing_setups), 3)
         self.assertEquals(len(new_setups), 0)
 
+    def test_keyword_query_name(self):
+        for (test, expected) in [('one', 'one'),
+                                 ('"one"', '"one"'),
+                                 ('(one or two)', '(one, etc.'),
+                                 ('one or two', 'one, etc.'),
+                                 ('((foo and bar) or baz)', '((foo, etc.'),
+                                 ('+EUV coronal waves', '+EUV, etc.'),
+                                 ('\"shell galaxies\" OR \"shell galaxy\"', '"shell galaxies", etc.')]:
+
+            name = utils.get_keyword_query_name(test)
+
+            self.assertEquals(name, expected)
+
     def test_parse(self):
         for (test, expected) in [('one two', '(one OR two)'),
                                  ('one or two', 'one or two'),

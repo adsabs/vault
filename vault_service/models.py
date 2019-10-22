@@ -24,8 +24,8 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
     user_data = Column(MutableDict.as_mutable(JSONB))
-    created = Column(UTCDateTime)
-    updated = Column(UTCDateTime)
+    created = Column(UTCDateTime, default=get_date)
+    updated = Column(UTCDateTime, default=get_date, onupdate=get_date)
 
 
 class Query(Base):
@@ -34,8 +34,8 @@ class Query(Base):
     id = Column(Integer, primary_key=True)
     uid = Column(Integer, default=0)
     qid = Column(String(32))
-    created = Column(UTCDateTime)
-    updated = Column(UTCDateTime)
+    created = Column(UTCDateTime, default=get_date)
+    updated = Column(UTCDateTime, default=get_date, onupdate=get_date)
     numfound = Column(Integer, default=0)
     category = Column(String(255), default='')
     query = Column(LargeBinary)

@@ -631,7 +631,7 @@ def import_myads():
 
     user_id = int(headers['X-Adsws-Uid'])
 
-    if user_id == 0:
+    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
 
     r = current_app.client.get(current_app.config['HARBOUR_MYADS_IMPORT_ENDPOINT'] % user_id)
