@@ -1,2 +1,2 @@
 [run]
-source = myads_service
+omit = vault_service/tests*
