@@ -197,7 +197,7 @@ def store_data():
         return json.dumps(data), 200
 
 
-@advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
+@advertise(scopes=[], rate_limit=[1000, 3600*24])
 @bp.route('/notifications', methods=['POST'])
 def create_myads_notification():
     """
@@ -343,7 +343,7 @@ def create_myads_notification():
 
     return json.dumps(output), 200
 
-@advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
+@advertise(scopes=[], rate_limit=[1000, 3600*24])
 @bp.route('/notifications', methods=['GET'])
 @bp.route('/notifications/<myads_id>', methods=['GET'])
 def get_myads_notifications(myads_id=None):
@@ -409,7 +409,7 @@ def get_myads_notifications(myads_id=None):
 
             return json.dumps(output), 200
 
-@advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
+@advertise(scopes=[], rate_limit=[1000, 3600*24])
 @bp.route('/notifications/<myads_id>', methods=['DELETE'])
 def delete_myads_notification(myads_id=None):
     """
@@ -439,7 +439,7 @@ def delete_myads_notification(myads_id=None):
             return json.dumps({'msg': 'Query was not deleted'}), 500
         return '{}', 204
 
-@advertise(scopes=['store-myads'], rate_limit=[1000, 3600*24])
+@advertise(scopes=[], rate_limit=[1000, 3600*24])
 @bp.route('/notifications/<myads_id>', methods=['PUT'])
 def edit_myads_notification(myads_id=None):
     """
@@ -617,7 +617,7 @@ def export(iso_datestring):
     return json.dumps({'users': output}), 200
 
 
-@advertise(scopes=['import-myads'], rate_limit=[1000, 3600*24])
+@advertise(scopes=[], rate_limit=[1000, 3600*24])
 @bp.route('/myads-import', methods=['GET'])
 def import_myads():
     '''
