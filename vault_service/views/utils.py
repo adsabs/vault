@@ -1,6 +1,7 @@
 import urlparse
 import urllib
 import json
+import re
 
 from flask import current_app
 from ..models import User, MyADS
@@ -9,6 +10,43 @@ from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
 from sqlalchemy.sql.expression import all_
 from lark import Lark, Transformer, v_args, Visitor
+
+grammar = Lark(r"""
+
+
+    start: clause+ (operator clause)*
+
+    clause: ("(" clause (operator? clause)* ")") 
+        | query+
+
+    query: qterm
+
+    qterm: anyterm -> qterm | phrase | PREPEND -> prepend
+
+    PREPEND.2: /=/ | /\+/ | /\-/
+
+    phrase: DOUBLE_QUOTED_STRING | SINGLE_QUOTED_STRING
+
+    DOUBLE_QUOTED_STRING.3  : /"[^"]*"/ | /\+"[^"]*"/ | /\-"[^"]*"/
+    SINGLE_QUOTED_STRING.3  : /'[^']*'/ | /\+'[^']*'/ | /\-'[^']*'/
+
+    anyterm: /[^)^\] \(^\n^\r]+/
+
+    operator: OPERATOR | NEWLINE
+
+    OPERATOR.2: "and" | "AND" | "or" | "OR" | "not" | "NOT" | "AND NOT" | "and not" | /,/ 
+
+    %import common.LETTER
+    %import common.ESCAPED_STRING
+    %import common.FLOAT
+    %import common.DIGIT
+    %import common.WS_INLINE
+    %import common.NEWLINE
+
+    %ignore WS_INLINE
+
+    """, parser="lalr")
+
 
 def make_solr_request(query, bigquery=None, headers=None):
     # I'm making a simplification here; sending just one content stream
@@ -375,6 +413,7 @@ def get_keyword_query_name(keywords):
 
     return first
 
+
 def parse_classic_keywords(query):
     """
     Wrapper function to parse the Classic keyword string and return a BBB-style keyword string
@@ -399,42 +438,6 @@ def _parse_classic_keywords_to_tree(data):
     :return: parsed tree
     """
 
-    grammar = Lark(r"""
-
-    
-    start: clause+ (operator clause)*
-    
-    clause: ("(" clause (operator? clause)* ")") 
-        | query+
-
-    query: qterm
-    
-    qterm: anyterm -> qterm | phrase | PREPEND -> prepend
-    
-    PREPEND.2: /=/ | /\+/ | /\-/
-        
-    phrase: DOUBLE_QUOTED_STRING | SINGLE_QUOTED_STRING
-
-    DOUBLE_QUOTED_STRING.3  : /"[^"]*"/ | /\+"[^"]*"/ | /\-"[^"]*"/
-    SINGLE_QUOTED_STRING.3  : /'[^']*'/ | /\+'[^']*'/ | /\-'[^']*'/
-    
-    anyterm: /[^)^\] \(^\n^\r]+/
-    
-    operator: OPERATOR | NEWLINE
-
-    OPERATOR.2: "and" | "AND" | "or" | "OR" | "not" | "NOT" | "AND NOT" | "and not" | /,/ 
-
-    %import common.LETTER
-    %import common.ESCAPED_STRING
-    %import common.FLOAT
-    %import common.DIGIT
-    %import common.WS_INLINE
-    %import common.NEWLINE
-    
-    %ignore WS_INLINE
-    
-    """, parser="lalr")
-
     tree = grammar.parse(data)
 
     return tree
@@ -445,20 +448,29 @@ class TreeVisitor(Visitor):
     Visitor class to transform the parsed tree into a BBB-style query.
     The final constructed query is stored in v.visit(tree).output
     """
+    placeholder = 'PLACEHOLDER '
+
     def start(self, node):
         out = []
+        newline = False
         for x in node.children:
+            if hasattr(x, 'newline'):
+                newline = True
             if hasattr(x, 'output'):
                 out.append(getattr(x, 'output'))
             else:
                 pass
         tmp = ' '.join(out)
+        if newline:
+            tmp = tmp.replace(self.placeholder, '')
+        else:
+            tmp = tmp.replace(self.placeholder, 'OR ')
 
         node.output = tmp
 
     def clause(self, node):
         out = []
-        ops = ['and', 'AND', 'or', 'OR', 'not', 'NOT', 'and not', 'AND NOT']
+        ops = ['AND', 'OR', 'NOT', 'AND NOT']
         prepend = ['=', '+', '-']
         for x in node.children:
             if hasattr(x, 'output'):
@@ -469,21 +481,19 @@ class TreeVisitor(Visitor):
             if i == 0:
                 output.append(o)
             else:
-                if output[i-1] in ops:
+                if output[i-1].upper() in ops:
                     output.append(o)
                 elif output[i-1] in prepend:
                     if i < 2:
                         output[i-1] += o
                     else:
-                        output[i-1] = 'OR ' + output[i-1] + o
-                    output.append('')
-                elif o in ops or o in prepend:
-                    output.append(o)
+                        output[i-1] = self.placeholder + output[i-1] + o
+                    continue
+                elif o.upper() in ops or o in prepend:
+                    output.append(o.upper())
                 else:
-                    output.append('OR ' + o)
+                    output.append(self.placeholder + o)
             i += 1
-
-        output = [x for x in output if x != '']
 
         if len(output) > 1:
             node.output = "({0})".format(' '.join(output))
@@ -506,8 +516,11 @@ class TreeVisitor(Visitor):
         node.output = node.children[0].value.strip()
 
     def operator(self, node):
-        v = node.children[0].value
-        if v not in ['and', 'AND', 'or', 'OR', 'not', 'NOT', 'and not', 'AND NOT']:
+        v = node.children[0].value.upper()
+        if v in ['\n', '\r', '\r\n']:
+            node.newline = True
+            v = 'OR'
+        elif v not in ['AND', 'OR', 'NOT', 'AND NOT']:
             v = 'OR'
         else:
             v = v
