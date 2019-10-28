@@ -21,20 +21,22 @@ grammar = Lark(r"""
 
     query: qterm
 
-    qterm: anyterm -> qterm | phrase | PREPEND -> prepend
+    qterm: anyterm -> qterm | phrase | PREPEND -> prepend | FORBIDDEN_LINE -> line
 
     PREPEND.2: /=/ | /\+/ | /\-/
+    
+    FORBIDDEN_LINE: /\[\w+\]/ | /\[\w+/ | /\w+\]/
 
     phrase: DOUBLE_QUOTED_STRING | SINGLE_QUOTED_STRING
 
     DOUBLE_QUOTED_STRING.3  : /"[^"]*"/ | /\+"[^"]*"/ | /\-"[^"]*"/
     SINGLE_QUOTED_STRING.3  : /'[^']*'/ | /\+'[^']*'/ | /\-'[^']*'/
 
-    anyterm: /[^)^\] \(^\n^\r]+/
+    anyterm: /[^)^\]\[ \(\n\r]+/
 
     operator: OPERATOR | NEWLINE
 
-    OPERATOR.2: "and" | "AND" | "or" | "OR" | "not" | "NOT" | "AND NOT" | "and not" | /,/ 
+    OPERATOR.2: "AND NOT" | "and not" | "and" | "AND" | "or" | "OR" | "not" | "NOT"  
 
     %import common.LETTER
     %import common.ESCAPED_STRING
@@ -478,7 +480,22 @@ def parse_classic_keywords(query):
     :param query: string; Classic-style keyword query
     :return: string; BBB-style keyword query
     """
-    clean_query = query.strip()
+    strip_operators = query.split('\r\n')
+    if len(strip_operators) > 1:
+        tmp = []
+        for s in strip_operators:
+            s = s.strip()
+            if s.endswith('OR') or s.endswith('or'):
+                s = s[:-2]
+            if s.startswith('OR') or s.startswith('or'):
+                s = s[2:]
+            if s.endswith('AND') or s.endswith('and'):
+                s = s[:-3]
+            if s.startswith('AND') or s.startswith('and'):
+                s = s[3:]
+            tmp.append(s)
+        query = '\r\n'.join(tmp)
+    clean_query = query.replace(',', ' ').replace(') (', ') OR (').strip()
     tree = _parse_classic_keywords_to_tree(clean_query)
 
     v = TreeVisitor()
@@ -571,6 +588,9 @@ class TreeVisitor(Visitor):
 
     def prepend(self, node):
         node.output = node.children[0].value.strip()
+
+    def line(self, node):
+        node.output = '{0}'.format(node.children[0].value.replace('[', '').replace(']', '').strip())
 
     def operator(self, node):
         v = node.children[0].value.upper()
