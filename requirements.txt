@@ -1,4 +1,4 @@
 git+https://github.com/adsabs/ADSMicroserviceUtils.git@v1.0.15
+git+https://github.com/adsabs/ADSParser.git@v1.0.0
 alembic==0.8.9
 psycopg2==2.8.3
-lark-parser==0.7.5

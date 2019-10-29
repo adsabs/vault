@@ -3,49 +3,13 @@ import urllib
 import json
 import re
 
+import adsparser
 from flask import current_app
 from ..models import User, MyADS
 
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
 from sqlalchemy.sql.expression import all_
-from lark import Lark, Transformer, v_args, Visitor
-
-grammar = Lark(r"""
-
-
-    start: clause+ (operator clause)*
-
-    clause: ("(" clause (operator? clause)* ")") 
-        | query+
-
-    query: qterm
-
-    qterm: anyterm -> qterm | phrase | PREPEND -> prepend
-
-    PREPEND.2: /=/ | /\+/ | /\-/
-
-    phrase: DOUBLE_QUOTED_STRING | SINGLE_QUOTED_STRING
-
-    DOUBLE_QUOTED_STRING.3  : /"[^"]*"/ | /\+"[^"]*"/ | /\-"[^"]*"/
-    SINGLE_QUOTED_STRING.3  : /'[^']*'/ | /\+'[^']*'/ | /\-'[^']*'/
-
-    anyterm: /[^)^\] \(^\n^\r]+/
-
-    operator: OPERATOR | NEWLINE
-
-    OPERATOR.2: "and" | "AND" | "or" | "OR" | "not" | "NOT" | "AND NOT" | "and not" | /,/ 
-
-    %import common.LETTER
-    %import common.ESCAPED_STRING
-    %import common.FLOAT
-    %import common.DIGIT
-    %import common.WS_INLINE
-    %import common.NEWLINE
-
-    %ignore WS_INLINE
-
-    """, parser="lalr")
 
 
 def make_solr_request(query, bigquery=None, headers=None):
@@ -250,7 +214,7 @@ def _import_arxiv(classic_setups=None, user_id=None):
     # classic required groups to be set but did not require daily_t1 to be set
     with current_app.session_scope() as session:
         if classic_setups.get('daily_t1,'):
-            data = parse_classic_keywords(classic_setups.get('daily_t1,'))
+            data = adsparser.parse_classic_keywords(classic_setups.get('daily_t1,'))
             name = '{0} - Recent Papers'.format(get_keyword_query_name(data))
             try:
                 q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data) \
@@ -391,27 +355,27 @@ def _import_keywords(classic_setups=None, user_id=None):
 
     data_list = []
     if classic_setups.get('phy_t1,'):
-        data = parse_classic_keywords(classic_setups.get('phy_t1,'))
+        data = adsparser.parse_classic_keywords(classic_setups.get('phy_t1,'))
         data = data + ' database:physics'
         data_list.append(data)
     if classic_setups.get('phy_t2,'):
-        data = parse_classic_keywords(classic_setups.get('phy_t2,'))
+        data = adsparser.parse_classic_keywords(classic_setups.get('phy_t2,'))
         data = data + ' database:physics'
         data_list.append(data)
     if classic_setups.get('pre_t1,'):
-        data = parse_classic_keywords(classic_setups.get('pre_t1,'))
+        data = adsparser.parse_classic_keywords(classic_setups.get('pre_t1,'))
         data = data + ' bibstem:arxiv'
         data_list.append(data)
     if classic_setups.get('pre_t2,'):
-        data = parse_classic_keywords(classic_setups.get('pre_t2,'))
+        data = adsparser.parse_classic_keywords(classic_setups.get('pre_t2,'))
         data = data + ' bibstem:arxiv'
         data_list.append(data)
     if classic_setups.get('ast_t1,'):
-        data = parse_classic_keywords(classic_setups.get('ast_t1,'))
+        data = adsparser.parse_classic_keywords(classic_setups.get('ast_t1,'))
         data = data + ' database:astronomy'
         data_list.append(data)
     if classic_setups.get('ast_t2,'):
-        data = parse_classic_keywords(classic_setups.get('ast_t2,'))
+        data = adsparser.parse_classic_keywords(classic_setups.get('ast_t2,'))
         data = data + ' database:astronomy'
         data_list.append(data)
 
@@ -469,117 +433,3 @@ def get_keyword_query_name(keywords):
         first = first + ', etc.'
 
     return first
-
-
-def parse_classic_keywords(query):
-    """
-    Wrapper function to parse the Classic keyword string and return a BBB-style keyword string
-
-    :param query: string; Classic-style keyword query
-    :return: string; BBB-style keyword query
-    """
-    clean_query = query.strip()
-    tree = _parse_classic_keywords_to_tree(clean_query)
-
-    v = TreeVisitor()
-    new_query = v.visit(tree).output
-
-    return new_query
-
-
-def _parse_classic_keywords_to_tree(data):
-    """
-    Given a string of keywords from Classic, parse the query tree
-
-    :param data: string of Classic keywords
-    :return: parsed tree
-    """
-
-    tree = grammar.parse(data)
-
-    return tree
-
-
-class TreeVisitor(Visitor):
-    """
-    Visitor class to transform the parsed tree into a BBB-style query.
-    The final constructed query is stored in v.visit(tree).output
-    """
-    placeholder = 'PLACEHOLDER '
-
-    def start(self, node):
-        out = []
-        newline = False
-        for x in node.children:
-            if hasattr(x, 'newline'):
-                newline = True
-            if hasattr(x, 'output'):
-                out.append(getattr(x, 'output'))
-            else:
-                pass
-        tmp = ' '.join(out)
-        if newline:
-            tmp = tmp.replace(self.placeholder, '')
-        else:
-            tmp = tmp.replace(self.placeholder, 'OR ')
-
-        node.output = tmp
-
-    def clause(self, node):
-        out = []
-        ops = ['AND', 'OR', 'NOT', 'AND NOT']
-        prepend = ['=', '+', '-']
-        for x in node.children:
-            if hasattr(x, 'output'):
-                out.append(getattr(x, 'output'))
-        output = []
-        i = 0
-        for o in out:
-            if i == 0:
-                output.append(o)
-            else:
-                if output[i-1].upper() in ops:
-                    output.append(o)
-                elif output[i-1] in prepend:
-                    if i < 2:
-                        output[i-1] += o
-                    else:
-                        output[i-1] = self.placeholder + output[i-1] + o
-                    continue
-                elif o.upper() in ops or o in prepend:
-                    output.append(o.upper())
-                else:
-                    output.append(self.placeholder + o)
-            i += 1
-
-        if len(output) > 1:
-            node.output = "({0})".format(' '.join(output))
-        else:
-            node.output = "{0}".format(' '.join(output))
-
-    def query(self, node):
-        node.output = node.children[0].output
-
-    def qterm(self, node):
-        node.output = node.children[0].output
-
-    def anyterm(self, node):
-        node.output = '{0}'.format(node.children[0].value.replace("'", "\'").replace('"', '\"').strip())
-
-    def phrase(self, node):
-        node.output = node.children[0].value.strip()
-
-    def prepend(self, node):
-        node.output = node.children[0].value.strip()
-
-    def operator(self, node):
-        v = node.children[0].value.upper()
-        if v in ['\n', '\r', '\r\n']:
-            node.newline = True
-            v = 'OR'
-        elif v not in ['AND', 'OR', 'NOT', 'AND NOT']:
-            v = 'OR'
-        else:
-            v = v
-
-        node.output = v
