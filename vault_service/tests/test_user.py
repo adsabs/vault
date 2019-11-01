@@ -216,7 +216,7 @@ class TestServices(TestCaseDatabase):
         r = self.client.get(url_for('user.get_myads_notifications'),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
 
-        self.assertStatus(r, 404)
+        self.assertStatus(r, 204)
 
         # try saving a query with bad data
         r = self.client.post(url_for('user.create_myads_notification'),
