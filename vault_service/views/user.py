@@ -394,7 +394,7 @@ def get_myads_notifications(myads_id=None):
         with current_app.session_scope() as session:
             all_setups = session.query(MyADS).filter_by(user_id=user_id).order_by(MyADS.id.asc()).all()
             if len(all_setups) == 0:
-                return '{}', 404
+                return '{}', 204
 
             output = []
             for s in all_setups:
