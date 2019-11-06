@@ -202,7 +202,7 @@ def store_data():
 @bp.route('/notifications/<myads_id>', methods=['GET', 'PUT', 'DELETE'])
 def myads_notifications(myads_id=None):
     """
-    Get one or all myADS notifications set up for a given user
+    Manipulate one or all myADS notifications set up for a given user
     :param myads_id: ID of a single notification, if only one is desired
     :return: list of json, details of one or all setups
     """
