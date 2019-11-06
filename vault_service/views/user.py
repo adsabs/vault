@@ -198,11 +198,13 @@ def store_data():
 
 
 @advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/notifications', methods=['POST'])
-def create_myads_notification():
+@bp.route('/notifications', methods=['GET', 'POST'])
+@bp.route('/notifications/<myads_id>', methods=['GET', 'PUT', 'DELETE'])
+def myads_notifications(myads_id=None):
     """
-    Create a new myADS notification
-    :return: json, details of new setup
+    Get one or all myADS notifications set up for a given user
+    :param myads_id: ID of a single notification, if only one is desired
+    :return: list of json, details of one or all setups
     """
     try:
         payload, headers = check_request(request)
@@ -214,6 +216,68 @@ def create_myads_notification():
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
 
+    if request.method == 'GET':
+        # detail-level view for a single setup
+        if myads_id:
+            with current_app.session_scope() as session:
+                setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
+                if setup is None:
+                    return '{}', 404
+                if setup.query_id is not None:
+                    q = session.query(Query).filter_by(id=setup.query_id).first()
+                    qid = q.qid
+                else:
+                    qid = None
+
+                output = {'id': setup.id,
+                          'name': setup.name,
+                          'qid': qid,
+                          'type': setup.type,
+                          'active': setup.active,
+                          'stateful': setup.stateful,
+                          'frequency': setup.frequency,
+                          'template': setup.template,
+                          'classes': setup.classes,
+                          'data': setup.data,
+                          'created': setup.created.isoformat(),
+                          'updated': setup.updated.isoformat()}
+
+                return json.dumps([output]), 200
+
+        # summary-level view of all setups (w/ condensed list of keywords returned)
+        else:
+            with current_app.session_scope() as session:
+                all_setups = session.query(MyADS).filter_by(user_id=user_id).order_by(MyADS.id.asc()).all()
+                if len(all_setups) == 0:
+                    return '{}', 204
+
+                output = []
+                for s in all_setups:
+                    o = {'id': s.id,
+                         'name': s.name,
+                         'type': s.type,
+                         'active': s.active,
+                         'frequency': s.frequency,
+                         'template': s.template,
+                         'created': s.created.isoformat()}
+                    output.append(o)
+
+                return json.dumps(output), 200
+    elif request.method == 'POST':
+        msg, status_code = _create_myads_notification(payload, headers, user_id)
+    elif request.method == 'PUT':
+        msg, status_code = _edit_myads_notification(payload, headers, user_id, myads_id)
+    elif request.method == 'DELETE':
+        msg, status_code = _delete_myads_notification(user_id, myads_id)
+
+    return msg, status_code
+
+
+def _create_myads_notification(payload=None, headers=None, user_id=None):
+    """
+    Create a new myADS notification
+    :return: json, details of new setup
+    """
     # check payload
     try:
         ntype = payload['type']
@@ -343,90 +407,13 @@ def create_myads_notification():
 
     return json.dumps(output), 200
 
-@advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/notifications', methods=['GET'])
-@bp.route('/notifications/<myads_id>', methods=['GET'])
-def get_myads_notifications(myads_id=None):
-    """
-    Get one or all myADS notifications set up for a given user
-    :param myads_id: ID of a single notification, if only one is desired
-    :return: list of json, details of one or all setups
-    """
-    try:
-        payload, headers = check_request(request)
-    except Exception as e:
-        return json.dumps({'msg': e.message or e.description}), 400
 
-    user_id = int(headers['X-Adsws-Uid'])
-
-    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
-        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
-
-    # detail-level view for a single setup
-    if myads_id:
-        with current_app.session_scope() as session:
-            setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
-            if setup is None:
-                return '{}', 404
-            if setup.query_id is not None:
-                q = session.query(Query).filter_by(id=setup.query_id).first()
-                qid = q.qid
-            else:
-                qid = None
-
-            output = {'id': setup.id,
-                      'name': setup.name,
-                      'qid': qid,
-                      'type': setup.type,
-                      'active': setup.active,
-                      'stateful': setup.stateful,
-                      'frequency': setup.frequency,
-                      'template': setup.template,
-                      'classes': setup.classes,
-                      'data': setup.data,
-                      'created': setup.created.isoformat(),
-                      'updated': setup.updated.isoformat()}
-
-            return json.dumps([output]), 200
-
-    # summary-level view of all setups (w/ condensed list of keywords returned)
-    else:
-        with current_app.session_scope() as session:
-            all_setups = session.query(MyADS).filter_by(user_id=user_id).order_by(MyADS.id.asc()).all()
-            if len(all_setups) == 0:
-                return '{}', 204
-
-            output = []
-            for s in all_setups:
-                o = {'id': s.id,
-                     'name': s.name,
-                     'type': s.type,
-                     'active': s.active,
-                     'frequency': s.frequency,
-                     'template': s.template,
-                     'created': s.created.isoformat()}
-                output.append(o)
-
-            return json.dumps(output), 200
-
-@advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/notifications/<myads_id>', methods=['DELETE'])
-def delete_myads_notification(myads_id=None):
+def _delete_myads_notification(user_id=None, myads_id=None):
     """
     Delete a single myADS notification setup
     :param myads_id: ID of a single notification
     :return: none
     """
-    try:
-        payload, headers = check_request(request)
-    except Exception as e:
-        return json.dumps({'msg': e.message or e.description}), 400
-
-    user_id = int(headers['X-Adsws-Uid'])
-
-    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
-        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
-
     with current_app.session_scope() as session:
         r = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
         if not r:
@@ -439,24 +426,13 @@ def delete_myads_notification(myads_id=None):
             return json.dumps({'msg': 'Query was not deleted'}), 500
         return '{}', 204
 
-@advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/notifications/<myads_id>', methods=['PUT'])
-def edit_myads_notification(myads_id=None):
+
+def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=None):
     """
     Edit a single myADS notification setup
     :param myads_id: ID of a single notification
     :return: json, details of edited setup
     """
-    try:
-        payload, headers = check_request(request)
-    except Exception as e:
-        return json.dumps({'msg': e.message or e.description}), 400
-
-    user_id = int(headers['X-Adsws-Uid'])
-
-    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
-        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
-
     # verify data/query
     if payload.get('data', None):
         solrq = payload['data'] + '&wt=json'
