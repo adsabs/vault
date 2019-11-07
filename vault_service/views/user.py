@@ -328,7 +328,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                 return json.dumps({'msg': 'Bad data passed'}), 400
 
         # verify data/query
-        solrq = payload['data'] + '&wt=json'
+        solrq = 'q=' + payload['data'] + '&wt=json'
         r = make_solr_request(query=solrq, headers=headers)
         if r.status_code != 200:
             return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
