@@ -147,10 +147,20 @@ def upsert_myads(classic_setups, user_id):
         existing_setups += existing
         new_setups += new
 
-    if classic_setups.get('phy_t1,') or classic_setups.get('phy_t2,') or classic_setups.get('pre_t1,') or \
-       classic_setups.get('pre_t2,') or classic_setups.get('ast_t1,') or classic_setups.get('ast_t2,'):
+    if classic_setups.get('phy_t1,') or classic_setups.get('phy_t2,') or classic_setups.get('ast_t1,') or \
+            classic_setups.get('ast_t2,'):
 
         existing, new = _import_keywords(classic_setups, user_id)
+        existing_setups += existing
+        new_setups += new
+
+    if classic_setups.get('pre_t1,'):
+        existing, new = _import_arxiv(classic_setups, user_id, keyword='pre_t1,')
+        existing_setups += existing
+        new_setups += new
+
+    if classic_setups.get('pre_t2,'):
+        existing, new = _import_arxiv(classic_setups, user_id, keyword='pre_t2,')
         existing_setups += existing
         new_setups += new
 
@@ -176,7 +186,7 @@ def _import_citations(classic_setups=None, user_id=None):
                                     'setup with {1} {2}'.format(user_id,
                                                                 classic_setups.get('firstname', ''),
                                                                 classic_setups.get('lastname', '')))
-            existing.append({'id': q.id, 'template': 'citations', 'name': q.name})
+            existing.append({'id': q.id, 'template': 'citations', 'name': q.name, 'frequency': q.frequency})
         except ormexc.NoResultFound:
             setup = MyADS(user_id=user_id,
                           type='template',
@@ -199,30 +209,37 @@ def _import_citations(classic_setups=None, user_id=None):
                 session.rollback()
                 return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
 
-            new.append({'id': myads_id, 'template': 'citations', 'name': setup.name})
+            new.append({'id': myads_id, 'template': 'citations', 'name': setup.name, 'frequency': 'weekly'})
 
     return existing, new
 
 
-def _import_arxiv(classic_setups=None, user_id=None):
+def _import_arxiv(classic_setups=None, user_id=None, keyword='daily_t1,'):
     existing = []
     new = []
     if not classic_setups or not user_id:
         current_app.logger.info('Classic setup and user ID must be supplied')
         return None, None
 
-    # classic required groups to be set but did not require daily_t1 to be set
+    if keyword == 'daily_t1,':
+        frequency = 'daily'
+    elif keyword in ['pre_t1,', 'pre_t2,']:
+        frequency = 'weekly'
+    else:
+        current_app.logger.info('Bad frequency keyword supplied: {0}'.format(keyword))
+        return None, None
+    # classic required groups to be set but did not require keywords to be set
     with current_app.session_scope() as session:
-        if classic_setups.get('daily_t1,'):
-            data = adsparser.parse_classic_keywords(classic_setups.get('daily_t1,'))
+        if classic_setups.get(keyword):
+            data = adsparser.parse_classic_keywords(classic_setups.get(keyword))
             name = '{0} - Recent Papers'.format(get_keyword_query_name(data))
             try:
                 q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data) \
                     .filter(classic_setups.get('groups') == MyADS.classes) \
                     .filter_by(template='arxiv').one()
-                current_app.logger.info('User {0} already has daily arxiv notifications '
-                                        'with keywords {1}'.format(user_id, data))
-                existing.append({'id': q.id, 'template': 'arxiv', 'name': q.name})
+                current_app.logger.info('User {0} already has {2} arxiv notifications '
+                                        'with keywords {1}'.format(user_id, data, frequency))
+                existing.append({'id': q.id, 'template': 'arxiv', 'name': q.name, 'frequency': q.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
                               type='template',
@@ -230,7 +247,7 @@ def _import_arxiv(classic_setups=None, user_id=None):
                               name=name,
                               active=True,
                               stateful=False,
-                              frequency='daily',
+                              frequency=frequency,
                               data=data,
                               classes=classic_setups.get('groups'))
 
@@ -246,16 +263,18 @@ def _import_arxiv(classic_setups=None, user_id=None):
                     session.rollback()
                     return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
 
-                new.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name})
+                new.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name, 'frequency': frequency})
         else:
             data = None
             name = 'arXiv - Recent Papers'
             try:
                 q = session.query(MyADS).filter_by(user_id=user_id) \
                     .filter(MyADS.classes == classic_setups.get('groups')).one()
-                current_app.logger.info('User {0} already has daily arxiv notifications for arxiv classes {1} '
-                                        'with no keywords specified'.format(user_id, classic_setups.get('groups')))
-                existing.append({'id': q.id, 'template': 'arxiv', 'name': q.name})
+                current_app.logger.info('User {0} already has {2} arxiv notifications for arxiv classes {1} '
+                                        'with no keywords specified'.format(user_id,
+                                                                            classic_setups.get('groups'),
+                                                                            frequency))
+                existing.append({'id': q.id, 'template': 'arxiv', 'name': q.name, 'frequency': q.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
                               type='template',
@@ -263,7 +282,7 @@ def _import_arxiv(classic_setups=None, user_id=None):
                               name=name,
                               active=True,
                               stateful=False,
-                              frequency='daily',
+                              frequency=frequency,
                               data=data,
                               classes=classic_setups.get('groups'))
 
@@ -278,7 +297,7 @@ def _import_arxiv(classic_setups=None, user_id=None):
                     session.rollback()
                     return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
 
-                new.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name})
+                new.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name, 'frequency': frequency})
 
     return existing, new
 
@@ -319,7 +338,7 @@ def _import_authors(classic_setups=None, user_id=None):
             q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data_all).one()
             current_app.logger.info('User {0} already has author notifications set up for authors {1}'.
                                     format(user_id, data_all))
-            existing.append({'id': q.id, 'template': 'authors', 'name': q.name})
+            existing.append({'id': q.id, 'template': 'authors', 'name': q.name, 'frequency': q.frequency})
         except ormexc.NoResultFound:
             setup = MyADS(user_id=user_id,
                           type='template',
@@ -341,7 +360,7 @@ def _import_authors(classic_setups=None, user_id=None):
                 session.rollback()
                 return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
 
-            new.append({'id': myads_id, 'template': 'authors', 'name': setup.name})
+            new.append({'id': myads_id, 'template': 'authors', 'name': setup.name, 'frequency': 'weekly'})
 
     return existing, new
 
@@ -362,14 +381,6 @@ def _import_keywords(classic_setups=None, user_id=None):
         data = adsparser.parse_classic_keywords(classic_setups.get('phy_t2,'))
         data = data + ' database:physics'
         data_list.append(data)
-    if classic_setups.get('pre_t1,'):
-        data = adsparser.parse_classic_keywords(classic_setups.get('pre_t1,'))
-        data = data + ' bibstem:arxiv'
-        data_list.append(data)
-    if classic_setups.get('pre_t2,'):
-        data = adsparser.parse_classic_keywords(classic_setups.get('pre_t2,'))
-        data = data + ' bibstem:arxiv'
-        data_list.append(data)
     if classic_setups.get('ast_t1,'):
         data = adsparser.parse_classic_keywords(classic_setups.get('ast_t1,'))
         data = data + ' database:astronomy'
@@ -386,7 +397,7 @@ def _import_keywords(classic_setups=None, user_id=None):
                     filter_by(template='keyword').one()
                 current_app.logger.info('User {0} already has keyword notifications set up for keywords {1}'.
                                         format(user_id, d))
-                existing.append({'id': q.id, 'template': 'keyword', 'name': q.name})
+                existing.append({'id': q.id, 'template': 'keyword', 'name': q.name, 'frequency': q.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
                               type='template',
@@ -407,7 +418,7 @@ def _import_keywords(classic_setups=None, user_id=None):
                     session.rollback()
                     return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
 
-                new.append({'id': myads_id, 'template': 'keyword', 'name': setup.name})
+                new.append({'id': myads_id, 'template': 'keyword', 'name': setup.name, 'frequency': 'weekly'})
 
     return existing, new
 

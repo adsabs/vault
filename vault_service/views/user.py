@@ -339,7 +339,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             classes = payload['classes']
             data = payload['data']
             stateful = False
-            frequency = 'daily'
+            frequency = payload.get('frequency', 'daily')
             name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
         elif payload['template'] == 'citations':
             template = 'citations'
