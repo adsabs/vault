@@ -435,7 +435,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
     """
     # verify data/query
     if payload.get('data', None):
-        solrq = payload['data'] + '&wt=json'
+        solrq = 'q=' + payload['data'] + '&wt=json'
         r = make_solr_request(query=solrq, headers=headers)
         if r.status_code != 200:
             return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
@@ -467,7 +467,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
             if payload.get('template', setup.template) == 'arxiv':
                 if not isinstance(payload.get('classes', setup.classes), list):
                     return json.dumps({'msg': 'Bad data passed'}), 400
-                if not set(payload.get('classes')).issubset(set(current_app.config['ALLOWED_ARXIV_CLASSES'])):
+                if payload.get('classes') and not set(payload.get('classes')).issubset(set(current_app.config['ALLOWED_ARXIV_CLASSES'])):
                     return json.dumps({'msg': 'Bad data passed'}), 400
                 setup.classes = payload.get('classes', setup.classes)
             qid = None
