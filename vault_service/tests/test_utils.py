@@ -61,11 +61,10 @@ class TestServices(TestCaseDatabase):
 
         with self.app.session_scope() as session:
             q = session.query(MyADS).filter_by(user_id=user_id).all()
-            self.assertEquals(len(q), 8)
-
+            self.assertEquals(len(q), 10)
         self.assertEquals(len(existing_setups), 0)
-        self.assertEquals(len(new_setups), 8)
-        self.assertEquals(new_setups[6], {'id': 7, 'template': 'arxiv', 'name': u'photosphere, etc. - Recent Papers', 'frequency': 'weekly'})
+        self.assertEquals(len(new_setups), 10)
+        self.assertEquals(new_setups[6], {'id': 7, 'template': 'keyword', 'name': u'photosphere, etc.', 'frequency': 'weekly'})
 
         user_id = 6
         classic_setup = {"ast_t1,": "+accretion disks X-ray binaries \"ultra compact\" reflection monte carlo UCXB IMBH",
@@ -87,7 +86,7 @@ class TestServices(TestCaseDatabase):
 
         self.assertEquals(len(existing_setups), 0)
         self.assertEquals(len(new_setups), 3)
-        self.assertEquals(new_setups[2], {'id': 11, 'template': 'keyword', 'name': u'(+accretion, etc.', 'frequency': 'weekly'})
+        self.assertEquals(new_setups[2], {'id': 13, 'template': 'keyword', 'name': u'(+accretion, etc.', 'frequency': 'weekly'})
 
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
 

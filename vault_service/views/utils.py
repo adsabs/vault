@@ -148,19 +148,9 @@ def upsert_myads(classic_setups, user_id):
         new_setups += new
 
     if classic_setups.get('phy_t1,') or classic_setups.get('phy_t2,') or classic_setups.get('ast_t1,') or \
-            classic_setups.get('ast_t2,'):
+            classic_setups.get('ast_t2,') or classic_setups.get('pre_t1,') or classic_setups.get('pre_t2,'):
 
         existing, new = _import_keywords(classic_setups, user_id)
-        existing_setups += existing
-        new_setups += new
-
-    if classic_setups.get('pre_t1,'):
-        existing, new = _import_arxiv(classic_setups, user_id, keyword='pre_t1,')
-        existing_setups += existing
-        new_setups += new
-
-    if classic_setups.get('pre_t2,'):
-        existing, new = _import_arxiv(classic_setups, user_id, keyword='pre_t2,')
         existing_setups += existing
         new_setups += new
 
@@ -214,31 +204,24 @@ def _import_citations(classic_setups=None, user_id=None):
     return existing, new
 
 
-def _import_arxiv(classic_setups=None, user_id=None, keyword='daily_t1,'):
+def _import_arxiv(classic_setups=None, user_id=None):
     existing = []
     new = []
     if not classic_setups or not user_id:
         current_app.logger.info('Classic setup and user ID must be supplied')
         return None, None
 
-    if keyword == 'daily_t1,':
-        frequency = 'daily'
-    elif keyword in ['pre_t1,', 'pre_t2,']:
-        frequency = 'weekly'
-    else:
-        current_app.logger.info('Bad frequency keyword supplied: {0}'.format(keyword))
-        return None, None
     # classic required groups to be set but did not require keywords to be set
     with current_app.session_scope() as session:
-        if classic_setups.get(keyword):
-            data = adsparser.parse_classic_keywords(classic_setups.get(keyword))
+        if classic_setups.get('daily_t1,'):
+            data = adsparser.parse_classic_keywords(classic_setups.get('daily_t1,'))
             name = '{0} - Recent Papers'.format(get_keyword_query_name(data))
             try:
                 q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data) \
                     .filter(classic_setups.get('groups') == MyADS.classes) \
                     .filter_by(template='arxiv').one()
-                current_app.logger.info('User {0} already has {2} arxiv notifications '
-                                        'with keywords {1}'.format(user_id, data, frequency))
+                current_app.logger.info('User {0} already has arxiv notifications '
+                                        'with keywords {1}'.format(user_id, data))
                 existing.append({'id': q.id, 'template': 'arxiv', 'name': q.name, 'frequency': q.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
@@ -247,7 +230,7 @@ def _import_arxiv(classic_setups=None, user_id=None, keyword='daily_t1,'):
                               name=name,
                               active=True,
                               stateful=False,
-                              frequency=frequency,
+                              frequency='daily',
                               data=data,
                               classes=classic_setups.get('groups'))
 
@@ -263,17 +246,16 @@ def _import_arxiv(classic_setups=None, user_id=None, keyword='daily_t1,'):
                     session.rollback()
                     return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
 
-                new.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name, 'frequency': frequency})
+                new.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name, 'frequency': 'daily'})
         else:
             data = None
             name = 'arXiv - Recent Papers'
             try:
                 q = session.query(MyADS).filter_by(user_id=user_id) \
                     .filter(MyADS.classes == classic_setups.get('groups')).one()
-                current_app.logger.info('User {0} already has {2} arxiv notifications for arxiv classes {1} '
+                current_app.logger.info('User {0} already has arxiv notifications for arxiv classes {1} '
                                         'with no keywords specified'.format(user_id,
-                                                                            classic_setups.get('groups'),
-                                                                            frequency))
+                                                                            classic_setups.get('groups')))
                 existing.append({'id': q.id, 'template': 'arxiv', 'name': q.name, 'frequency': q.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
@@ -282,7 +264,7 @@ def _import_arxiv(classic_setups=None, user_id=None, keyword='daily_t1,'):
                               name=name,
                               active=True,
                               stateful=False,
-                              frequency=frequency,
+                              frequency='daily',
                               data=data,
                               classes=classic_setups.get('groups'))
 
@@ -297,7 +279,7 @@ def _import_arxiv(classic_setups=None, user_id=None, keyword='daily_t1,'):
                     session.rollback()
                     return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
 
-                new.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name, 'frequency': frequency})
+                new.append({'id': myads_id, 'template': 'arxiv', 'name': setup.name, 'frequency': 'daily'})
 
     return existing, new
 
@@ -310,57 +292,54 @@ def _import_authors(classic_setups=None, user_id=None):
         return None, None
 
     # concatenate all authors (should this be split by collection? then import behavior would differ from standard)
-    data_all = ''
+    data_list = []
+    classes_list = []
     if classic_setups.get('phy_aut,'):
         author_list = classic_setups.get('phy_aut,').split('\r\n')
-        data = ' OR '.join(['author:"' + x + '"' for x in author_list])
-        if data not in data_all:
-            if len(data_all) > 0:
-                data = ' OR ' + data
-            data_all += data
+        data = 'database:physics ({})'.format(' OR '.join(['author:"' + x + '"' for x in author_list]))
+        data_list.append(data)
+        classes_list.append(None)
     if classic_setups.get('pre_aut,'):
         author_list = classic_setups.get('pre_aut,').split('\r\n')
-        data = ' OR '.join(['author:"' + x + '"' for x in author_list])
-        if data not in data_all:
-            if len(data_all) > 0:
-                data = ' OR ' + data
-            data_all += data
+        data = 'bibstem:arxiv ({})'.format(' OR '.join(['author:"' + x + '"' for x in author_list]))
+        data_list.append(data)
+        classes_list.append(classic_setups.get('groups', None))
     if classic_setups.get('ast_aut,'):
         author_list = classic_setups.get('ast_aut,').split('\r\n')
-        data = ' OR '.join(['author:"' + x + '"' for x in author_list])
-        if data not in data_all:
-            if len(data_all) > 0:
-                data = ' OR ' + data
-            data_all += data
+        data = 'database:astronomy ({})'.format(' OR '.join(['author:"' + x + '"' for x in author_list]))
+        data_list.append(data)
+        classes_list.append(None)
 
     with current_app.session_scope() as session:
-        try:
-            q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data_all).one()
-            current_app.logger.info('User {0} already has author notifications set up for authors {1}'.
-                                    format(user_id, data_all))
-            existing.append({'id': q.id, 'template': 'authors', 'name': q.name, 'frequency': q.frequency})
-        except ormexc.NoResultFound:
-            setup = MyADS(user_id=user_id,
-                          type='template',
-                          template='authors',
-                          name='Favorite Authors - Recent Papers',
-                          active=True,
-                          stateful=True,
-                          frequency='weekly',
-                          data=data_all)
-
+        for d, c in zip(data_list, classes_list):
             try:
-                session.add(setup)
-                session.flush()
-                myads_id = setup.id
-                session.commit()
-                current_app.logger.info('Added myADS authors notifications for user {0} with keywords {1}'.
-                                        format(user_id, data_all))
-            except exc.IntegrityError as e:
-                session.rollback()
-                return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
+                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=d).filter_by(classes=c).one()
+                current_app.logger.info('User {0} already has author notifications set up for author query {1} '
+                                        'with classes {2}'.format(user_id, d, c))
+                existing.append({'id': q.id, 'template': 'authors', 'name': q.name, 'frequency': q.frequency})
+            except ormexc.NoResultFound:
+                setup = MyADS(user_id=user_id,
+                              type='template',
+                              template='authors',
+                              name='Favorite Authors - Recent Papers',
+                              active=True,
+                              stateful=True,
+                              frequency='weekly',
+                              data=d,
+                              classes=c)
 
-            new.append({'id': myads_id, 'template': 'authors', 'name': setup.name, 'frequency': 'weekly'})
+                try:
+                    session.add(setup)
+                    session.flush()
+                    myads_id = setup.id
+                    session.commit()
+                    current_app.logger.info('Added myADS authors notifications for user {0} with keywords {1} '
+                                            'and classes {2}'.format(user_id, d, c))
+                except exc.IntegrityError as e:
+                    session.rollback()
+                    return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
+
+                new.append({'id': myads_id, 'template': 'authors', 'name': setup.name, 'frequency': 'weekly'})
 
     return existing, new
 
@@ -373,47 +352,70 @@ def _import_keywords(classic_setups=None, user_id=None):
         return None, None
 
     data_list = []
+    classes_list = []
+    name_list = []
     if classic_setups.get('phy_t1,'):
-        data = adsparser.parse_classic_keywords(classic_setups.get('phy_t1,'))
-        data = data + ' database:physics'
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('phy_t1,'))
+        data = 'database:physics ({})'.format(keywords)
         data_list.append(data)
+        classes_list.append(None)
+        name_list.append(get_keyword_query_name(keywords))
     if classic_setups.get('phy_t2,'):
-        data = adsparser.parse_classic_keywords(classic_setups.get('phy_t2,'))
-        data = data + ' database:physics'
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('phy_t2,'))
+        data = 'database:physics ({})'.format(keywords)
         data_list.append(data)
+        classes_list.append(None)
+        name_list.append(get_keyword_query_name(keywords))
+    if classic_setups.get('pre_t1,'):
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('pre_t1,'))
+        data = 'bibstem:arxiv ({})'.format(keywords)
+        data_list.append(data)
+        classes_list.append(classic_setups.get('groups', None))
+        name_list.append(get_keyword_query_name(keywords))
+    if classic_setups.get('pre_t2,'):
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('pre_t2,'))
+        data = 'bibstem:arxiv ({})'.format(keywords)
+        data_list.append(data)
+        classes_list.append(classic_setups.get('groups', None))
+        name_list.append(get_keyword_query_name(keywords))
     if classic_setups.get('ast_t1,'):
-        data = adsparser.parse_classic_keywords(classic_setups.get('ast_t1,'))
-        data = data + ' database:astronomy'
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('ast_t1,'))
+        data = 'database:astronomy ({})'.format(keywords)
         data_list.append(data)
+        classes_list.append(None)
+        name_list.append(get_keyword_query_name(keywords))
     if classic_setups.get('ast_t2,'):
-        data = adsparser.parse_classic_keywords(classic_setups.get('ast_t2,'))
-        data = data + ' database:astronomy'
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('ast_t2,'))
+        data = 'database:astronomy ({})'.format(keywords)
         data_list.append(data)
+        classes_list.append(None)
+        name_list.append(get_keyword_query_name(keywords))
 
     with current_app.session_scope() as session:
-        for d in data_list:
+        for d, c, n in zip(data_list, classes_list, name_list):
             try:
-                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=d). \
+                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=d).filter_by(classes=c). \
                     filter_by(template='keyword').one()
-                current_app.logger.info('User {0} already has keyword notifications set up for keywords {1}'.
-                                        format(user_id, d))
+                current_app.logger.info('User {0} already has keyword notifications set up for keywords {1} '
+                                        'with classes {2}'.format(user_id, d, c))
                 existing.append({'id': q.id, 'template': 'keyword', 'name': q.name, 'frequency': q.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
                               type='template',
                               template='keyword',
-                              name=get_keyword_query_name(d),
+                              name=n,
                               active=True,
                               stateful=False,
                               frequency='weekly',
-                              data=d)
+                              data=d,
+                              classes=c)
                 try:
                     session.add(setup)
                     session.flush()
                     myads_id = setup.id
                     session.commit()
-                    current_app.logger.info('Added myADS keyword notifications for user {0} with keywords {1}'.
-                                            format(user_id, d))
+                    current_app.logger.info('Added myADS keyword notifications for user {0} with keywords {1} '
+                                            'and classes {2}'.format(user_id, d, c))
                 except exc.IntegrityError as e:
                     session.rollback()
                     return json.dumps({'msg': 'New myADS setup was not saved, error: {0}'.format(e)}), 500
