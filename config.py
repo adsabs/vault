@@ -30,7 +30,7 @@ MAX_ALLOWED_JSON_KEYS = 100
 BOOTSTRAP_USER_ID = 0
 
 # import endpoints
-#HARBOUR_MYADS_IMPORT_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/harbour/myads/classic/%s'
+HARBOUR_MYADS_IMPORT_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/harbour/myads/classic/%s'
 
 # arXiv categories and sub-categories
 ALLOWED_ARXIV_CLASSES = ['astro-ph',
