@@ -98,7 +98,7 @@ def check_request(request):
     return (payload, new_headers)
 
 
-def upsert_myads(classic_setups, user_id):
+def upsert_myads(classic_setups, user_id, current_app=current_app):
     # check to see if user has a myADS setup already
     with current_app.session_scope() as session:
         try:
@@ -133,24 +133,24 @@ def upsert_myads(classic_setups, user_id):
     # u'ast_aut,' --> authors (astronomy)
 
     if len(classic_setups.get('lastname', '')) > 0:
-        existing, new = _import_citations(classic_setups, user_id)
+        existing, new = _import_citations(classic_setups, user_id, current_app=current_app)
         existing_setups += existing
         new_setups += new
 
     if classic_setups.get('daily_t1,') or classic_setups.get('groups'):
-        existing, new = _import_arxiv(classic_setups, user_id)
+        existing, new = _import_arxiv(classic_setups, user_id, current_app=current_app)
         existing_setups += existing
         new_setups += new
 
     if classic_setups.get('phy_aut,') or classic_setups.get('pre_aut,') or classic_setups.get('ast_aut,'):
-        existing, new = _import_authors(classic_setups, user_id)
+        existing, new = _import_authors(classic_setups, user_id, current_app=current_app)
         existing_setups += existing
         new_setups += new
 
     if classic_setups.get('phy_t1,') or classic_setups.get('phy_t2,') or classic_setups.get('ast_t1,') or \
             classic_setups.get('ast_t2,') or classic_setups.get('pre_t1,') or classic_setups.get('pre_t2,'):
 
-        existing, new = _import_keywords(classic_setups, user_id)
+        existing, new = _import_keywords(classic_setups, user_id, current_app=current_app)
         existing_setups += existing
         new_setups += new
 
@@ -160,14 +160,14 @@ def upsert_myads(classic_setups, user_id):
     return existing_setups, new_setups
 
 
-def _import_citations(classic_setups=None, user_id=None):
+def _import_citations(classic_setups=None, user_id=None, current_app=current_app):
     existing = []
     new = []
     if not classic_setups or not user_id:
         current_app.logger.info('Classic setup and user ID must be supplied')
         return None, None
 
-    data = 'citations(author:"{0}, {1}")'.format(classic_setups.get('lastname', ''),
+    data = 'author:"{0}, {1}")'.format(classic_setups.get('lastname', ''),
                                                  classic_setups.get('firstname', ''))
     with current_app.session_scope() as session:
         try:
@@ -204,7 +204,7 @@ def _import_citations(classic_setups=None, user_id=None):
     return existing, new
 
 
-def _import_arxiv(classic_setups=None, user_id=None):
+def _import_arxiv(classic_setups=None, user_id=None, current_app=current_app):
     existing = []
     new = []
     if not classic_setups or not user_id:
@@ -284,7 +284,7 @@ def _import_arxiv(classic_setups=None, user_id=None):
     return existing, new
 
 
-def _import_authors(classic_setups=None, user_id=None):
+def _import_authors(classic_setups=None, user_id=None, current_app=current_app):
     existing = []
     new = []
     if not classic_setups or not user_id:
@@ -344,7 +344,7 @@ def _import_authors(classic_setups=None, user_id=None):
     return existing, new
 
 
-def _import_keywords(classic_setups=None, user_id=None):
+def _import_keywords(classic_setups=None, user_id=None, current_app=current_app):
     existing = []
     new = []
     if not classic_setups or not user_id:

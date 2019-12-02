@@ -6,9 +6,13 @@ VAULT_VERSION = 'v0.1' # Arbitrary string identifying the service (will be retur
 SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://postgres:postgres@localhost:5432/test_vault"
 SQLALCHEMY_ECHO = False
 
+#API_ENDPOINT = 'https://api.adsabs.harvard.edu'
+API_ENDPOINT = 'https://devapi.adsabs.harvard.edu'
 # location of the remote solr-microservice
-VAULT_SOLR_QUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/query'
-VAULT_SOLR_BIGQUERY_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/search/bigquery'
+VAULT_SOLR_QUERY_ENDPOINT = API_ENDPOINT + '/v1/search/query'
+VAULT_SOLR_BIGQUERY_ENDPOINT = API_ENDPOINT + '/v1/search/bigquery'
+
+USER_EMAIL_ADSWS_API_URL = API_ENDPOINT + '/v1/user/%s'
 
 # alembic will
 use_flask_db_url = True
@@ -26,7 +30,7 @@ MAX_ALLOWED_JSON_KEYS = 100
 BOOTSTRAP_USER_ID = 0
 
 # import endpoints
-HARBOUR_MYADS_IMPORT_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/harbour/myads/classic/%s'
+#HARBOUR_MYADS_IMPORT_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/harbour/myads/classic/%s'
 
 # arXiv categories and sub-categories
 ALLOWED_ARXIV_CLASSES = ['astro-ph',
@@ -75,4 +79,11 @@ ALLOWED_ARXIV_CLASSES = ['astro-ph',
                          'econ',
                          'econ.EM', 'econ.GN', 'econ.TH']
 
-
+# harbour db connection for import script
+POSTGRES_HARBOUR = {
+        'port': 1234,
+        'host': 'localhost',
+        'user': 'harbour',
+        'database': 'harbour',
+        'password': 'fix-me'
+    }
