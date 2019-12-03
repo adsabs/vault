@@ -86,7 +86,7 @@ class TestServices(TestCaseDatabase):
 
         self.assertEquals(len(existing_setups), 0)
         self.assertEquals(len(new_setups), 3)
-        self.assertEquals(new_setups[2], {'id': 13, 'template': 'keyword', 'name': u'(+accretion, etc.', 'frequency': 'weekly'})
+        self.assertEquals(new_setups[2], {'id': 13, 'template': 'keyword', 'name': u'accretion, etc.', 'frequency': 'weekly'})
 
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
 
@@ -96,10 +96,10 @@ class TestServices(TestCaseDatabase):
     def test_keyword_query_name(self):
         for (test, expected) in [('one', 'one'),
                                  ('"one"', '"one"'),
-                                 ('(one or two)', '(one, etc.'),
+                                 ('(one or two)', 'one, etc.'),
                                  ('one or two', 'one, etc.'),
-                                 ('((foo and bar) or baz)', '((foo, etc.'),
-                                 ('+EUV coronal waves', '+EUV, etc.'),
+                                 ('((foo and bar) or baz)', 'foo, etc.'),
+                                 ('+EUV coronal waves', 'EUV, etc.'),
                                  ('\"shell galaxies\" OR \"shell galaxy\"', '"shell galaxies", etc.')]:
 
             name = utils.get_keyword_query_name(test)

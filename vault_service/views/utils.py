@@ -445,4 +445,4 @@ def get_keyword_query_name(keywords):
     if first != keywords:
         first = first + ', etc.'
 
-    return first
+    return first.strip('(').strip('+')
