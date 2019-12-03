@@ -6,8 +6,8 @@ VAULT_VERSION = 'v0.1' # Arbitrary string identifying the service (will be retur
 SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://postgres:postgres@localhost:5432/test_vault"
 SQLALCHEMY_ECHO = False
 
-#API_ENDPOINT = 'https://api.adsabs.harvard.edu'
-API_ENDPOINT = 'https://devapi.adsabs.harvard.edu'
+API_ENDPOINT = 'https://api.adsabs.harvard.edu'
+
 # location of the remote solr-microservice
 VAULT_SOLR_QUERY_ENDPOINT = API_ENDPOINT + '/v1/search/query'
 VAULT_SOLR_BIGQUERY_ENDPOINT = API_ENDPOINT + '/v1/search/bigquery'
