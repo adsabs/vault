@@ -167,7 +167,7 @@ def _import_citations(classic_setups=None, user_id=None):
         current_app.logger.info('Classic setup and user ID must be supplied')
         return None, None
 
-    data = 'author:"{0}, {1}")'.format(classic_setups.get('lastname', ''),
+    data = 'author:"{0}, {1}"'.format(classic_setups.get('lastname', ''),
                                        classic_setups.get('firstname', ''))
     with current_app.session_scope() as session:
         try:
