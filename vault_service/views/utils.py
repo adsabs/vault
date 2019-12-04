@@ -294,24 +294,28 @@ def _import_authors(classic_setups=None, user_id=None):
     # concatenate all authors (should this be split by collection? then import behavior would differ from standard)
     data_list = []
     classes_list = []
+    names_list = []
     if classic_setups.get('phy_aut,'):
         author_list = classic_setups.get('phy_aut,').split('\r\n')
         data = 'database:physics ({})'.format(' OR '.join(['author:"' + x + '"' for x in author_list]))
         data_list.append(data)
         classes_list.append(None)
+        names_list.append('Favorite Authors (physics collection) - Recent Papers')
     if classic_setups.get('pre_aut,'):
         author_list = classic_setups.get('pre_aut,').split('\r\n')
         data = 'bibstem:arxiv ({})'.format(' OR '.join(['author:"' + x + '"' for x in author_list]))
         data_list.append(data)
         classes_list.append(classic_setups.get('groups', None))
+        names_list.append('Favorite Authors (arXiv e-prints collection) - Recent Papers')
     if classic_setups.get('ast_aut,'):
         author_list = classic_setups.get('ast_aut,').split('\r\n')
         data = 'database:astronomy ({})'.format(' OR '.join(['author:"' + x + '"' for x in author_list]))
         data_list.append(data)
         classes_list.append(None)
+        names_list.append('Favorite Authors (astronomy collection) - Recent Papers')
 
     with current_app.session_scope() as session:
-        for d, c in zip(data_list, classes_list):
+        for d, c, n in zip(data_list, classes_list, names_list):
             try:
                 q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=d).filter_by(classes=c).one()
                 current_app.logger.info('User {0} already has author notifications set up for author query {1} '
@@ -321,7 +325,7 @@ def _import_authors(classic_setups=None, user_id=None):
                 setup = MyADS(user_id=user_id,
                               type='template',
                               template='authors',
-                              name='Favorite Authors - Recent Papers',
+                              name=n,
                               active=True,
                               stateful=True,
                               frequency='weekly',
@@ -359,37 +363,37 @@ def _import_keywords(classic_setups=None, user_id=None):
         data = 'database:physics ({})'.format(keywords)
         data_list.append(data)
         classes_list.append(None)
-        name_list.append(get_keyword_query_name(keywords))
+        name_list.append(get_keyword_query_name(keywords, database='physics'))
     if classic_setups.get('phy_t2,'):
         keywords = adsparser.parse_classic_keywords(classic_setups.get('phy_t2,'))
         data = 'database:physics ({})'.format(keywords)
         data_list.append(data)
         classes_list.append(None)
-        name_list.append(get_keyword_query_name(keywords))
+        name_list.append(get_keyword_query_name(keywords, database='physics'))
     if classic_setups.get('pre_t1,'):
         keywords = adsparser.parse_classic_keywords(classic_setups.get('pre_t1,'))
         data = 'bibstem:arxiv ({})'.format(keywords)
         data_list.append(data)
         classes_list.append(classic_setups.get('groups', None))
-        name_list.append(get_keyword_query_name(keywords))
+        name_list.append(get_keyword_query_name(keywords, database='arxiv'))
     if classic_setups.get('pre_t2,'):
         keywords = adsparser.parse_classic_keywords(classic_setups.get('pre_t2,'))
         data = 'bibstem:arxiv ({})'.format(keywords)
         data_list.append(data)
         classes_list.append(classic_setups.get('groups', None))
-        name_list.append(get_keyword_query_name(keywords))
+        name_list.append(get_keyword_query_name(keywords, database='arxiv'))
     if classic_setups.get('ast_t1,'):
         keywords = adsparser.parse_classic_keywords(classic_setups.get('ast_t1,'))
         data = 'database:astronomy ({})'.format(keywords)
         data_list.append(data)
         classes_list.append(None)
-        name_list.append(get_keyword_query_name(keywords))
+        name_list.append(get_keyword_query_name(keywords, database='astronomy'))
     if classic_setups.get('ast_t2,'):
         keywords = adsparser.parse_classic_keywords(classic_setups.get('ast_t2,'))
         data = 'database:astronomy ({})'.format(keywords)
         data_list.append(data)
         classes_list.append(None)
-        name_list.append(get_keyword_query_name(keywords))
+        name_list.append(get_keyword_query_name(keywords, database='astronomy'))
 
     with current_app.session_scope() as session:
         for d, c, n in zip(data_list, classes_list, name_list):
@@ -425,10 +429,11 @@ def _import_keywords(classic_setups=None, user_id=None):
     return existing, new
 
 
-def get_keyword_query_name(keywords):
+def get_keyword_query_name(keywords, database=None):
     """
     For a given keyword string, return the first word or phrase, to be used in the query name
     :param keywords: string of keywords
+    :param database: database (physics, astronomy, arxiv) to be included in query name, if needed
     :return: first word or phrase
     """
     key_list = keywords.split(' ')
@@ -444,5 +449,15 @@ def get_keyword_query_name(keywords):
 
     if first != keywords:
         first = first + ', etc.'
+
+    if database:
+        if database == 'physics':
+            first += ' (physics collection)'
+        elif database == 'astronomy':
+            first += ' (astronomy collection)'
+        elif database == 'arxiv':
+            first += ' (arXiv e-prints collection)'
+        else:
+            current_app.logger.warning('Database {} is invalid'.format(database))
 
     return first.strip('(').strip('+')
