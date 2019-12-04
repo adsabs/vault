@@ -64,7 +64,10 @@ class TestServices(TestCaseDatabase):
             self.assertEquals(len(q), 10)
         self.assertEquals(len(existing_setups), 0)
         self.assertEquals(len(new_setups), 10)
-        self.assertEquals(new_setups[6], {'id': 7, 'template': 'keyword', 'name': u'photosphere, etc.', 'frequency': 'weekly'})
+        self.assertEquals(new_setups[6], {'id': 7,
+                                          'template': 'keyword',
+                                          'name': u'photosphere, etc. (arXiv e-prints collection)',
+                                          'frequency': 'weekly'})
 
         user_id = 6
         classic_setup = {"ast_t1,": "+accretion disks X-ray binaries \"ultra compact\" reflection monte carlo UCXB IMBH",
@@ -86,7 +89,10 @@ class TestServices(TestCaseDatabase):
 
         self.assertEquals(len(existing_setups), 0)
         self.assertEquals(len(new_setups), 3)
-        self.assertEquals(new_setups[2], {'id': 13, 'template': 'keyword', 'name': u'accretion, etc.', 'frequency': 'weekly'})
+        self.assertEquals(new_setups[2], {'id': 13,
+                                          'template': 'keyword',
+                                          'name': u'accretion, etc. (astronomy collection)',
+                                          'frequency': 'weekly'})
 
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
 
