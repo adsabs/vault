@@ -498,5 +498,28 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['name'], 'test query')
         self.assertEquals(r.json[1]['name'], 'Favorite Authors - Recent Papers')
 
+        # save an arXiv query without keywords
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'arxiv',
+                                              'classes': ['cs']}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json['data'], None)
+
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             data=json.dumps({'type': 'template',
+                                              'data': '',
+                                              'template': 'arxiv',
+                                              'classes': ['hep-ex']}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json['data'], None)
+
+
 if __name__ == '__main__':
     unittest.main()
