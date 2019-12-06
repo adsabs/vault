@@ -317,6 +317,11 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                           frequency=payload.get('frequency'))
 
     elif ntype == 'template':
+        # handles both None values and empty strings
+        if not payload.get('data'):
+            payload['old_data'] = payload.get('data', None)
+            payload['data'] = None
+
         if 'template' not in payload:
             return json.dumps({'msg': 'Bad data passed'}), 400
 
@@ -329,11 +334,12 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             if not set(payload.get('classes')).issubset(set(current_app.config['ALLOWED_ARXIV_CLASSES'])):
                 return json.dumps({'msg': 'Bad data passed'}), 400
 
-        # verify data/query
-        solrq = 'q=' + payload['data'] + '&wt=json'
-        r = make_solr_request(query=solrq, headers=headers)
-        if r.status_code != 200:
-            return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
+        if payload.get('data', None):
+            # verify data/query
+            solrq = 'q=' + payload.get('data') + '&wt=json'
+            r = make_solr_request(query=solrq, headers=headers)
+            if r.status_code != 200:
+                return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
 
         # add metadata
         if payload['template'] == 'arxiv':
@@ -342,7 +348,10 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             data = payload.get('data', None)
             stateful = False
             frequency = payload.get('frequency', 'daily')
-            name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
+            if payload.get('data', None):
+                name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
+            else:
+                name = 'Recent Papers'
         elif payload['template'] == 'citations':
             template = 'citations'
             classes = None
@@ -435,6 +444,11 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
     :param myads_id: ID of a single notification
     :return: json, details of edited setup
     """
+    # handles both None values and empty strings
+    if not payload.get('data'):
+        payload['old_data'] = payload.get('data', None)
+        payload['data'] = None
+
     # verify data/query
     if payload.get('data', None):
         solrq = 'q=' + payload['data'] + '&wt=json'
