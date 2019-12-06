@@ -259,7 +259,9 @@ def myads_notifications(myads_id=None):
                          'active': s.active,
                          'frequency': s.frequency,
                          'template': s.template,
-                         'created': s.created.isoformat()}
+                         'data': s.data,
+                         'created': s.created.isoformat(),
+                         'updated': s.updated.isoformat()}
                     output.append(o)
 
                 return json.dumps(output), 200
@@ -318,7 +320,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
         if 'template' not in payload:
             return json.dumps({'msg': 'Bad data passed'}), 400
 
-        if not isinstance(payload.get('data'), basestring):
+        if not payload['template'] == 'arxiv' and not isinstance(payload.get('data'), basestring):
             return json.dumps({'msg': 'Bad data passed'}), 400
 
         if payload['template'] == 'arxiv':
@@ -337,7 +339,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
         if payload['template'] == 'arxiv':
             template = 'arxiv'
             classes = payload['classes']
-            data = payload['data']
+            data = payload.get('data', None)
             stateful = False
             frequency = payload.get('frequency', 'daily')
             name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
@@ -452,13 +454,29 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                 return json.dumps({'msg': 'Cannot edit template type'}), 400
             # edit name to reflect potentially new data input
             if payload.get('template', setup.template) == 'arxiv':
-                setup.name = '{0} - Recent Papers'.format(get_keyword_query_name(payload.get('data', setup.data)))
+                name_template = '{0} - Recent Papers'
+                # if a name is provided that wasn't just the old name, keep the new provided name
+                if payload.get('name', None) and payload.get('name') != setup.name:
+                    setup.name = payload.get('name')
+                # if name wasn't provided, check saved name - update if templated name
+                elif setup.name == name_template.format(get_keyword_query_name(setup.data)):
+                    setup.name = name_template.format(get_keyword_query_name(payload.get('data', setup.data)))
+                # if name wasn't provided and previous name wasn't templated, keep whatever was there
             elif payload.get('template', setup.template) == 'citations':
-                setup.name = '{0} - Citations'.format(payload.get('data', setup.data))
+                name_template = '{0} - Citations'
+                if payload.get('name', None) and payload.get('name') != setup.name:
+                    setup.name = payload.get('name')
+                elif setup.name == name_template.format(setup.data):
+                    setup.name = name_template.format(payload.get('data', setup.data))
             elif payload.get('template', setup.template) == 'authors':
-                setup.name = 'Favorite Authors - Recent Papers'
+                if payload.get('name', None) and payload.get('name') != setup.name:
+                    setup.name = payload.get('name')
             elif payload.get('template', setup.template) == 'keyword':
-                setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data)))
+                name_template = '{0}'
+                if payload.get('name', None) and payload.get('name') != setup.name:
+                    setup.name = payload.get('name')
+                elif setup.name == name_template.format(setup.data):
+                    setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data)))
             else:
                 return json.dumps({'msg': 'Wrong template type passed'}), 400
             if not isinstance(payload.get('data', setup.data), basestring):
