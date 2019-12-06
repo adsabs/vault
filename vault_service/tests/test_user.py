@@ -425,13 +425,52 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
 
+        # check editing the query name
+        r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            data=json.dumps({'type': 'template',
+                                             'template': 'arxiv',
+                                             'name': 'keyword1, etc. - Recent Papers',
+                                             'data': 'keyword2 OR keyword3',
+                                             'classes': ['astro-ph']}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        # name was provided, but it was constructed, so the name should be updated
+        self.assertEquals(r.json['name'], 'keyword2, etc. - Recent Papers')
+
+        r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            data=json.dumps({'type': 'template',
+                                             'template': 'arxiv',
+                                             'name': 'test query',
+                                             'data': 'keyword2 OR keyword3',
+                                             'classes': ['astro-ph']}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        # a non-constructed name was provided - use that
+        self.assertEquals(r.json['name'], 'test query')
+
+        r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            data=json.dumps({'type': 'template',
+                                             'template': 'arxiv',
+                                             'data': 'keyword1 OR keyword2 OR keyword3',
+                                             'classes': ['astro-ph']}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        # no name is provided, so keep the old provided name
+        self.assertEquals(r.json['name'], 'test query')
+
         # check the exported setup
         r = self.client.get(url_for('user.get_myads', user_id='4'),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'keyword1, etc. - Recent Papers')
+        self.assertEquals(r.json[0]['name'], 'test query')
         self.assertFalse(r.json[0]['stateful'])
         self.assertEquals(r.json[0]['type'], 'template')
         self.assertTrue(r.json[0]['active'])
@@ -456,7 +495,7 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['name'], 'keyword1, etc. - Recent Papers')
+        self.assertEquals(r.json[0]['name'], 'test query')
         self.assertEquals(r.json[1]['name'], 'Favorite Authors - Recent Papers')
 
 if __name__ == '__main__':
