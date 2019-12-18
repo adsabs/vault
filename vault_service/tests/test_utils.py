@@ -37,6 +37,7 @@ class TestServices(TestCaseDatabase):
                                    'bigquery': 'foo\nbar'})
         self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
 
+    @httpretty.activate
     def test_upsert_myads(self):
         user_id = 5
         classic_setup = {"ast_aut,": "Lockwood, G.",
@@ -97,6 +98,34 @@ class TestServices(TestCaseDatabase):
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
 
         self.assertEquals(len(existing_setups), 3)
+        self.assertEquals(len(new_setups), 0)
+
+        # test duplicate handling - manually adding a duplicate query shouldn't break the import
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('VAULT_SOLR_QUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+                            "responseHeader":{
+                            "status":0, "QTime":0,
+                            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+                            "response":{"numFound":10456930,"start":0,"docs":[
+                              { "bibcode":"2005JGRC..110.4002G" },
+                              { "bibcode":"2005JGRC..110.4003N" },
+                              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'citations',
+                                              'data': 'author:"Koliopanos, Filippos"'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+
+        existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
+
+        self.assertEquals(len(existing_setups), 4)
         self.assertEquals(len(new_setups), 0)
 
     def test_keyword_query_name(self):
