@@ -642,14 +642,14 @@ def import_myads():
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
 
-    r = current_app.client.get(current_app.config['HARBOUR_MYADS_IMPORT_ENDPOINT'] % user_id)
+    r = current_app.client.get(current_app.config['HARBOUR_MYADS_IMPORT_ENDPOINT'] % user_id, headers=headers)
 
     if r.status_code != 200:
-        return r.json(), r.status_code
+        return json.dumps(r.json()), r.status_code
 
     # convert classic setup keys into new setups
     existing_setups, new_setups = upsert_myads(classic_setups=r.json(), user_id=user_id)
     setups = {'existing': existing_setups, 'new': new_setups}
 
-    return setups, 200
+    return json.dumps(setups), 200
 

@@ -177,6 +177,14 @@ def _import_citations(classic_setups=None, user_id=None):
                                                                 classic_setups.get('firstname', ''),
                                                                 classic_setups.get('lastname', '')))
             existing.append({'id': q.id, 'template': 'citations', 'name': q.name, 'frequency': q.frequency})
+        except ormexc.MultipleResultsFound:
+            q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data).all()
+            current_app.logger.info('User {0} already has multiple myADS citations notifications '
+                                    'setup with {1} {2}'.format(user_id,
+                                                                classic_setups.get('firstname', ''),
+                                                                classic_setups.get('lastname', '')))
+            for qi in q:
+                existing.append({'id': qi.id, 'template': 'citations', 'name': qi.name, 'frequency': qi.frequency})
         except ormexc.NoResultFound:
             setup = MyADS(user_id=user_id,
                           type='template',
@@ -223,6 +231,14 @@ def _import_arxiv(classic_setups=None, user_id=None):
                 current_app.logger.info('User {0} already has arxiv notifications '
                                         'with keywords {1}'.format(user_id, data))
                 existing.append({'id': q.id, 'template': 'arxiv', 'name': q.name, 'frequency': q.frequency})
+            except ormexc.MultipleResultsFound:
+                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data) \
+                    .filter(classic_setups.get('groups') == MyADS.classes) \
+                    .filter_by(template='arxiv').all()
+                current_app.logger.info('User {0} already has multiple arxiv notifications '
+                                        'with keywords {1}'.format(user_id, data))
+                for qi in q:
+                    existing.append({'id': qi.id, 'template': 'arxiv', 'name': qi.name, 'frequency': qi.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
                               type='template',
@@ -257,6 +273,14 @@ def _import_arxiv(classic_setups=None, user_id=None):
                                         'with no keywords specified'.format(user_id,
                                                                             classic_setups.get('groups')))
                 existing.append({'id': q.id, 'template': 'arxiv', 'name': q.name, 'frequency': q.frequency})
+            except ormexc.MultipleResultsFound:
+                q = session.query(MyADS).filter_by(user_id=user_id) \
+                    .filter(MyADS.classes == classic_setups.get('groups')).all()
+                current_app.logger.info('User {0} already has multiple arxiv notifications for arxiv classes {1} '
+                                        'with no keywords specified'.format(user_id,
+                                                                            classic_setups.get('groups')))
+                for qi in q:
+                    existing.append({'id': qi.id, 'template': 'arxiv', 'name': qi.name, 'frequency': qi.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
                               type='template',
@@ -321,6 +345,12 @@ def _import_authors(classic_setups=None, user_id=None):
                 current_app.logger.info('User {0} already has author notifications set up for author query {1} '
                                         'with classes {2}'.format(user_id, d, c))
                 existing.append({'id': q.id, 'template': 'authors', 'name': q.name, 'frequency': q.frequency})
+            except ormexc.MultipleResultsFound:
+                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=d).filter_by(classes=c).all()
+                current_app.logger.info('User {0} already has multiple author notifications set up for author query {1} '
+                                        'with classes {2}'.format(user_id, d, c))
+                for qi in q:
+                    existing.append({'id': qi.id, 'template': 'authors', 'name': qi.name, 'frequency': qi.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
                               type='template',
@@ -403,6 +433,13 @@ def _import_keywords(classic_setups=None, user_id=None):
                 current_app.logger.info('User {0} already has keyword notifications set up for keywords {1} '
                                         'with classes {2}'.format(user_id, d, c))
                 existing.append({'id': q.id, 'template': 'keyword', 'name': q.name, 'frequency': q.frequency})
+            except ormexc.MultipleResultsFound:
+                q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=d).filter_by(classes=c). \
+                    filter_by(template='keyword').all()
+                current_app.logger.info('User {0} already has multiple keyword notifications set up for keywords {1} '
+                                        'with classes {2}'.format(user_id, d, c))
+                for qi in q:
+                    existing.append({'id': qi.id, 'template': 'keyword', 'name': qi.name, 'frequency': qi.frequency})
             except ormexc.NoResultFound:
                 setup = MyADS(user_id=user_id,
                               type='template',
