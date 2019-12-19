@@ -339,7 +339,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             solrq = 'q=' + payload.get('data') + '&wt=json'
             r = make_solr_request(query=solrq, headers=headers)
             if r.status_code != 200:
-                return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
+                return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 400
 
         # add metadata
         if payload['template'] == 'arxiv':
