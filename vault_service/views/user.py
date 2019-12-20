@@ -454,7 +454,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
         solrq = 'q=' + payload['data'] + '&wt=json'
         r = make_solr_request(query=solrq, headers=headers)
         if r.status_code != 200:
-            return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
+            return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 400
 
     with current_app.session_scope() as session:
         setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
@@ -473,7 +473,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                 if payload.get('name', None) and payload.get('name') != setup.name:
                     setup.name = payload.get('name')
                 # if name wasn't provided, check saved name - update if templated name
-                elif setup.name == name_template.format(get_keyword_query_name(setup.data)):
+                elif setup.data and setup.name == name_template.format(get_keyword_query_name(setup.data)):
                     setup.name = name_template.format(get_keyword_query_name(payload.get('data', setup.data)))
                 # if name wasn't provided and previous name wasn't templated, keep whatever was there
             elif payload.get('template', setup.template) == 'citations':
