@@ -520,6 +520,27 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
         self.assertEquals(r.json['data'], None)
 
+        # test a blank arXiv query
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'arxiv',
+                                              'classes': ['astro-ph']}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        query_id = r.json['id']
+
+        # make sure it's editable
+        r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            data=json.dumps({'type': 'template',
+                                             'template': 'arxiv',
+                                             'data': 'keyword1',
+                                             'classes': ['astro-ph']}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
 
 if __name__ == '__main__':
     unittest.main()
