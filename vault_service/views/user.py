@@ -301,7 +301,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
 
     if ntype == 'query':
         if not all(k in payload for k in ('qid', 'name', 'stateful', 'frequency')):
-            return json.dumps({'msg': 'Bad data passed'}), 400
+            return json.dumps({'msg': 'Bad data passed; at least one required keyword is missing'}), 400
         with current_app.session_scope() as session:
             qid = payload.get('qid')
             q = session.query(Query).filter_by(qid=qid).first()
@@ -323,23 +323,23 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             payload['data'] = None
 
         if 'template' not in payload:
-            return json.dumps({'msg': 'Bad data passed'}), 400
+            return json.dumps({'msg': 'Bad data passed; at least one required keyword is missing'}), 400
 
         if not payload['template'] == 'arxiv' and not isinstance(payload.get('data'), basestring):
-            return json.dumps({'msg': 'Bad data passed'}), 400
+            return json.dumps({'msg': 'Bad data passed; data keyword should be a string'}), 400
 
         if payload['template'] == 'arxiv':
             if not isinstance(payload.get('classes'), list):
-                return json.dumps({'msg': 'Bad data passed'}), 400
+                return json.dumps({'msg': 'Bad data passed; classes keyword should be a list'}), 400
             if not set(payload.get('classes')).issubset(set(current_app.config['ALLOWED_ARXIV_CLASSES'])):
-                return json.dumps({'msg': 'Bad data passed'}), 400
+                return json.dumps({'msg': 'Bad data passed; verify arXiv classes are correct'}), 400
 
         if payload.get('data', None):
             # verify data/query
             solrq = 'q=' + payload.get('data') + '&wt=json'
             r = make_solr_request(query=solrq, headers=headers)
             if r.status_code != 200:
-                return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 400
+                return json.dumps({'msg': 'Could not verify the query: {0}; reason: {1}'.format(payload, r.text)}), 400
 
         # add metadata
         if payload['template'] == 'arxiv':
@@ -386,7 +386,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                       classes=classes,
                       data=data)
     else:
-        return json.dumps({'msg': 'Bad data passed'}), 400
+        return json.dumps({'msg': 'Bad data passed; type must be query or template'}), 400
 
     # update/store the template query data, get a qid back
     with current_app.session_scope() as session:
@@ -454,7 +454,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
         solrq = 'q=' + payload['data'] + '&wt=json'
         r = make_solr_request(query=solrq, headers=headers)
         if r.status_code != 200:
-            return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 400
+            return json.dumps({'msg': 'Could not verify the query: {0}; reason: {1}'.format(payload, r.text)}), 400
 
     with current_app.session_scope() as session:
         setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
@@ -494,13 +494,13 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
             else:
                 return json.dumps({'msg': 'Wrong template type passed'}), 400
             if not isinstance(payload.get('data', setup.data), basestring):
-                return json.dumps({'msg': 'Bad data passed'}), 400
+                return json.dumps({'msg': 'Bad data passed; data keyword should be a string'}), 400
             setup.data = payload.get('data', setup.data)
             if payload.get('template', setup.template) == 'arxiv':
                 if not isinstance(payload.get('classes', setup.classes), list):
-                    return json.dumps({'msg': 'Bad data passed'}), 400
+                    return json.dumps({'msg': 'Bad data passed; classes keyword should be a list'}), 400
                 if payload.get('classes') and not set(payload.get('classes')).issubset(set(current_app.config['ALLOWED_ARXIV_CLASSES'])):
-                    return json.dumps({'msg': 'Bad data passed'}), 400
+                    return json.dumps({'msg': 'Bad data passed; verify arXiv classes are correct'}), 400
                 setup.classes = payload.get('classes', setup.classes)
             qid = None
         if payload.get('type', setup.type) == 'query':
