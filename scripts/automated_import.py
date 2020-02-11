@@ -76,7 +76,7 @@ def import_from_classic(filename=None, do_import=False, email_address=None, forc
             if do_import:
                 with current_app.session_scope() as session:
                     try:
-                        q = session.query(MyADS).filter_by(user_id=user_id).one()
+                        q = session.query(MyADS).filter_by(user_id=user_id).first()
                         existing_user += 1
                     except ormexc.NoResultFound:
                         force = True
