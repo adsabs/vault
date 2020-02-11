@@ -40,9 +40,9 @@ class TestServices(TestCaseDatabase):
     @httpretty.activate
     def test_upsert_myads(self):
         user_id = 5
-        classic_setup = {"ast_aut,": "Lockwood, G.",
-                         "ast_t1,": "photosphere\r\nchromosphere\r\n",
-                         "ast_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
+        classic_setup = {"ast_aut": "Lockwood, G.",
+                         "ast_t1": "photosphere\r\nchromosphere\r\n",
+                         "ast_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
                          "email": "gwl@lowell.edi",
                          "firstname": "",
                          "groups": [
@@ -50,12 +50,12 @@ class TestServices(TestCaseDatabase):
                          ],
                          "id": 2060288,
                          "lastname": "",
-                         "phy_aut,": "Lockwood, G.",
-                         "phy_t1,": "photosphere\r\nchromosphere\r\n",
-                         "phy_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
-                         "pre_aut,": "Lockwood, G.",
-                         "pre_t1,": "photosphere\r\nchromosphere\r\n",
-                         "pre_t2,": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\""
+                         "phy_aut": "Lockwood, G.",
+                         "phy_t1": "photosphere\r\nchromosphere\r\n",
+                         "phy_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
+                         "pre_aut": "Lockwood, G.",
+                         "pre_t1": "photosphere\r\nchromosphere\r\n",
+                         "pre_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\""
                          }
 
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
@@ -71,8 +71,8 @@ class TestServices(TestCaseDatabase):
                                           'frequency': 'weekly'})
 
         user_id = 6
-        classic_setup = {"ast_t1,": "+accretion disks X-ray binaries \"ultra compact\" reflection monte carlo UCXB IMBH",
-                         "daily_t1,": "X-ray binaries accretion disk reflection AGN spectroscopy IMBH ULX ultraluminous pulsar M-sigma",
+        classic_setup = {"ast_t1": "+accretion disks X-ray binaries \"ultra compact\" reflection monte carlo UCXB IMBH",
+                         "daily_t1": "X-ray binaries accretion disk reflection AGN spectroscopy IMBH ULX ultraluminous pulsar M-sigma",
                          "email": "fkoliopanos@irap.omp.eu",
                          "firstname": "Filippos",
                          "groups": [

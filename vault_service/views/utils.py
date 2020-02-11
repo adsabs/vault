@@ -120,35 +120,35 @@ def upsert_myads(classic_setups, user_id):
     # u'email' --> user email
     # u'firstname' --> user first name (for citations)
     # u'lastname' --> user last name (for citations)
-    # u'daily_t1,' --> keywords 1 (daily arxiv)
+    # u'daily_t1' --> keywords 1 (daily arxiv)
     # u'groups' --> arxiv classes (daily) - list
-    # u'phy_t1,' --> keywords 1 (physics)
-    # u'phy_t2,' --> keywords 2 (physics)
-    # u'phy_aut,' --> authors (physics)
-    # u'pre_t1,' --> keywords 1 (weekly arxiv)
-    # u'pre_t2,' --> keywords 2 (weekly arxiv)
-    # u'pre_aut,' --> authors (weekly arxiv)
-    # u'ast_t1,' --> keywords 1 (astronomy)
-    # u'ast_t2,' --> keywords 2 (astronomy)
-    # u'ast_aut,' --> authors (astronomy)
+    # u'phy_t1' --> keywords 1 (physics)
+    # u'phy_t2' --> keywords 2 (physics)
+    # u'phy_aut' --> authors (physics)
+    # u'pre_t1' --> keywords 1 (weekly arxiv)
+    # u'pre_t2' --> keywords 2 (weekly arxiv)
+    # u'pre_aut' --> authors (weekly arxiv)
+    # u'ast_t1' --> keywords 1 (astronomy)
+    # u'ast_t2' --> keywords 2 (astronomy)
+    # u'ast_aut' --> authors (astronomy)
 
     if len(classic_setups.get('lastname', '')) > 0:
         existing, new = _import_citations(classic_setups, user_id)
         existing_setups += existing
         new_setups += new
 
-    if classic_setups.get('daily_t1,') or classic_setups.get('groups'):
+    if classic_setups.get('daily_t1') or classic_setups.get('groups'):
         existing, new = _import_arxiv(classic_setups, user_id)
         existing_setups += existing
         new_setups += new
 
-    if classic_setups.get('phy_aut,') or classic_setups.get('pre_aut,') or classic_setups.get('ast_aut,'):
+    if classic_setups.get('phy_aut') or classic_setups.get('pre_aut') or classic_setups.get('ast_aut'):
         existing, new = _import_authors(classic_setups, user_id)
         existing_setups += existing
         new_setups += new
 
-    if classic_setups.get('phy_t1,') or classic_setups.get('phy_t2,') or classic_setups.get('ast_t1,') or \
-            classic_setups.get('ast_t2,') or classic_setups.get('pre_t1,') or classic_setups.get('pre_t2,'):
+    if classic_setups.get('phy_t1') or classic_setups.get('phy_t2') or classic_setups.get('ast_t1') or \
+            classic_setups.get('ast_t2') or classic_setups.get('pre_t1') or classic_setups.get('pre_t2'):
 
         existing, new = _import_keywords(classic_setups, user_id)
         existing_setups += existing
@@ -221,8 +221,8 @@ def _import_arxiv(classic_setups=None, user_id=None):
 
     # classic required groups to be set but did not require keywords to be set
     with current_app.session_scope() as session:
-        if classic_setups.get('daily_t1,'):
-            data = adsparser.parse_classic_keywords(classic_setups.get('daily_t1,'))
+        if classic_setups.get('daily_t1'):
+            data = adsparser.parse_classic_keywords(classic_setups.get('daily_t1'))
             name = '{0} - Recent Papers'.format(get_keyword_query_name(data))
             try:
                 q = session.query(MyADS).filter_by(user_id=user_id).filter_by(data=data) \
@@ -317,22 +317,22 @@ def _import_authors(classic_setups=None, user_id=None):
 
     # concatenate all authors
     data_all = ''
-    if classic_setups.get('phy_aut,'):
-        author_list = classic_setups.get('phy_aut,').split('\r\n')
+    if classic_setups.get('phy_aut'):
+        author_list = classic_setups.get('phy_aut').split('\r\n')
         data = ' OR '.join(['author:"' + x + '"' for x in author_list])
         if data not in data_all:
             if len(data_all) > 0:
                 data = ' OR ' + data
             data_all += data
-    if classic_setups.get('pre_aut,'):
-        author_list = classic_setups.get('pre_aut,').split('\r\n')
+    if classic_setups.get('pre_aut'):
+        author_list = classic_setups.get('pre_aut').split('\r\n')
         data = ' OR '.join(['author:"' + x + '"' for x in author_list])
         if data not in data_all:
             if len(data_all) > 0:
                 data = ' OR ' + data
             data_all += data
-    if classic_setups.get('ast_aut,'):
-        author_list = classic_setups.get('ast_aut,').split('\r\n')
+    if classic_setups.get('ast_aut'):
+        author_list = classic_setups.get('ast_aut').split('\r\n')
         data = ' OR '.join(['author:"' + x + '"' for x in author_list])
         if data not in data_all:
             if len(data_all) > 0:
@@ -386,39 +386,39 @@ def _import_keywords(classic_setups=None, user_id=None):
 
     data_1 = ''
     data_2 = ''
-    if classic_setups.get('phy_t1,'):
-        keywords = adsparser.parse_classic_keywords(classic_setups.get('phy_t1,'))
+    if classic_setups.get('phy_t1'):
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('phy_t1'))
         if keywords not in data_1:
             if len(data_1) > 0:
                 keywords = ' OR ' + keywords
             data_1 += keywords
-    if classic_setups.get('pre_t1,'):
-        keywords = adsparser.parse_classic_keywords(classic_setups.get('pre_t1,'))
+    if classic_setups.get('pre_t1'):
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('pre_t1'))
         if keywords not in data_1:
             if len(data_1) > 0:
                 keywords = ' OR ' + keywords
             data_1 += keywords
-    if classic_setups.get('ast_t1,'):
-        keywords = adsparser.parse_classic_keywords(classic_setups.get('ast_t1,'))
+    if classic_setups.get('ast_t1'):
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('ast_t1'))
         if keywords not in data_1:
             if len(data_1) > 0:
                 keywords = ' OR ' + keywords
             data_1 += keywords
 
-    if classic_setups.get('phy_t2,'):
-        keywords = adsparser.parse_classic_keywords(classic_setups.get('phy_t2,'))
+    if classic_setups.get('phy_t2'):
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('phy_t2'))
         if keywords not in data_2:
             if len(data_2) > 0:
                 keywords = ' OR ' + keywords
             data_2 += keywords
-    if classic_setups.get('pre_t2,'):
-        keywords = adsparser.parse_classic_keywords(classic_setups.get('pre_t2,'))
+    if classic_setups.get('pre_t2'):
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('pre_t2'))
         if keywords not in data_2:
             if len(data_2) > 0:
                 keywords = ' OR ' + keywords
             data_2 += keywords
-    if classic_setups.get('ast_t2,'):
-        keywords = adsparser.parse_classic_keywords(classic_setups.get('ast_t2,'))
+    if classic_setups.get('ast_t2'):
+        keywords = adsparser.parse_classic_keywords(classic_setups.get('ast_t2'))
         if keywords not in data_2:
             if len(data_2) > 0:
                 keywords = ' OR ' + keywords
