@@ -493,7 +493,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                     setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data)))
             else:
                 return json.dumps({'msg': 'Wrong template type passed'}), 400
-            if not isinstance(payload.get('data', setup.data), basestring):
+            if payload.get('data', None) and not isinstance(payload.get('data', setup.data), basestring):
                 return json.dumps({'msg': 'Bad data passed; data keyword should be a string'}), 400
             setup.data = payload.get('data', setup.data)
             if payload.get('template', setup.template) == 'arxiv':
