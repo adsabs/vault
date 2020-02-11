@@ -536,6 +536,15 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
                             data=json.dumps({'type': 'template',
                                              'template': 'arxiv',
+                                             'active': False}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+
+        r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            data=json.dumps({'type': 'template',
+                                             'template': 'arxiv',
                                              'data': 'keyword1',
                                              'classes': ['astro-ph']}),
                             content_type='application/json')
