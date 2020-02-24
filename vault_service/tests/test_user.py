@@ -551,5 +551,31 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
 
+    @httpretty.activate
+    def test_myads_import(self):
+        # can't use as anonymous user
+        user_id = 1
+        r = self.client.get(url_for('user.import_myads'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
+
+        self.assertStatus(r, 400)
+
+        user_id = 5
+
+        httpretty.register_uri(
+            httpretty.GET,
+            self.app.config.get('HARBOUR_MYADS_IMPORT_ENDPOINT') % user_id,
+            content_type='application/json',
+            status=200,
+            body="""{"id": 123456, "firstname": "Michael", "lastname": "Kurtz"}"""
+        )
+
+        r = self.client.get(url_for('user.import_myads'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
+
+        self.assertStatus(r, 200)
+        self.assertEquals(len(r.json['new']), 1)
+        self.assertEquals(len(r.json['existing']), 0)
+
 if __name__ == '__main__':
     unittest.main()
