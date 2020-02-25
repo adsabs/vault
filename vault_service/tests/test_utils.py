@@ -40,7 +40,7 @@ class TestServices(TestCaseDatabase):
     @httpretty.activate
     def test_upsert_myads(self):
         user_id = 5
-        classic_setup = {"ast_aut": "Lockwood, G.",
+        classic_setup = {"ast_aut": "Lockwood, G.\r\nKurtz, M.",
                          "ast_t1": "photosphere\r\nchromosphere\r\n",
                          "ast_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
                          "email": "gwl@lowell.edi",
@@ -55,7 +55,8 @@ class TestServices(TestCaseDatabase):
                          "phy_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
                          "pre_aut": "Lockwood, G.",
                          "pre_t1": "photosphere\r\nchromosphere\r\n",
-                         "pre_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\""
+                         "pre_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
+                         "disabled": []
                          }
 
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
@@ -79,7 +80,8 @@ class TestServices(TestCaseDatabase):
                             "astro-ph"
                          ],
                          "id": 1085441,
-                         "lastname": "Koliopanos"
+                         "lastname": "Koliopanos",
+                         "disabled": ["daily"]
                          }
 
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
@@ -87,6 +89,9 @@ class TestServices(TestCaseDatabase):
         with self.app.session_scope() as session:
             q = session.query(MyADS).filter_by(user_id=user_id).all()
             self.assertEquals(len(q), 3)
+            self.assertTrue(q[0].active)
+            self.assertFalse(q[1].active)
+            self.assertTrue(q[2].active)
 
         self.assertEquals(len(existing_setups), 0)
         self.assertEquals(len(new_setups), 3)
@@ -140,4 +145,13 @@ class TestServices(TestCaseDatabase):
             name = utils.get_keyword_query_name(test)
 
             self.assertEquals(name, expected)
+
+        name = utils.get_keyword_query_name('one', database='physics')
+        self.assertEquals(name, 'one (physics collection)')
+
+        name = utils.get_keyword_query_name('two', database='astronomy')
+        self.assertEquals(name, 'two (astronomy collection)')
+
+        name = utils.get_keyword_query_name('three', database='arxiv')
+        self.assertEquals(name, 'three (arXiv e-prints collection)')
 

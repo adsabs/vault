@@ -131,26 +131,41 @@ def upsert_myads(classic_setups, user_id):
     # u'ast_t1' --> keywords 1 (astronomy)
     # u'ast_t2' --> keywords 2 (astronomy)
     # u'ast_aut' --> authors (astronomy)
+    # u'disabled' --> array w/ categories for which emails have been disabled (ast, phy, pre, daily)
+
+    disabled = classic_setups.get('disabled', [])
+    weekly_keys = ['ast', 'phy', 'pre']
+    # if even one of the weekly keys is set active, leave active
+    if set(disabled) == set(weekly_keys):
+        weekly_active = False
+    else:
+        weekly_active = True
+
+    if 'daily' in disabled:
+        daily_active = False
+    else:
+        daily_active = True
 
     if len(classic_setups.get('lastname', '')) > 0:
-        existing, new = _import_citations(classic_setups, user_id)
+
+        existing, new = _import_citations(classic_setups, user_id, active=weekly_active)
         existing_setups += existing
         new_setups += new
 
     if classic_setups.get('daily_t1') or classic_setups.get('groups'):
-        existing, new = _import_arxiv(classic_setups, user_id)
+        existing, new = _import_arxiv(classic_setups, user_id, active=daily_active)
         existing_setups += existing
         new_setups += new
 
     if classic_setups.get('phy_aut') or classic_setups.get('pre_aut') or classic_setups.get('ast_aut'):
-        existing, new = _import_authors(classic_setups, user_id)
+        existing, new = _import_authors(classic_setups, user_id, active=weekly_active)
         existing_setups += existing
         new_setups += new
 
     if classic_setups.get('phy_t1') or classic_setups.get('phy_t2') or classic_setups.get('ast_t1') or \
             classic_setups.get('ast_t2') or classic_setups.get('pre_t1') or classic_setups.get('pre_t2'):
 
-        existing, new = _import_keywords(classic_setups, user_id)
+        existing, new = _import_keywords(classic_setups, user_id, active=weekly_active)
         existing_setups += existing
         new_setups += new
 
@@ -160,7 +175,7 @@ def upsert_myads(classic_setups, user_id):
     return existing_setups, new_setups
 
 
-def _import_citations(classic_setups=None, user_id=None):
+def _import_citations(classic_setups=None, user_id=None, active=True):
     existing = []
     new = []
     if not classic_setups or not user_id:
@@ -191,7 +206,7 @@ def _import_citations(classic_setups=None, user_id=None):
                           template='citations',
                           name='{0} {1} - Citations'.format(classic_setups.get('firstname', ''),
                                                             classic_setups.get('lastname', '')),
-                          active=True,
+                          active=active,
                           stateful=True,
                           frequency='weekly',
                           data=data)
@@ -212,7 +227,7 @@ def _import_citations(classic_setups=None, user_id=None):
     return existing, new
 
 
-def _import_arxiv(classic_setups=None, user_id=None):
+def _import_arxiv(classic_setups=None, user_id=None, active=True):
     existing = []
     new = []
     if not classic_setups or not user_id:
@@ -244,7 +259,7 @@ def _import_arxiv(classic_setups=None, user_id=None):
                               type='template',
                               template='arxiv',
                               name=name,
-                              active=True,
+                              active=active,
                               stateful=False,
                               frequency='daily',
                               data=data,
@@ -286,7 +301,7 @@ def _import_arxiv(classic_setups=None, user_id=None):
                               type='template',
                               template='arxiv',
                               name=name,
-                              active=True,
+                              active=active,
                               stateful=False,
                               frequency='daily',
                               data=data,
@@ -308,7 +323,7 @@ def _import_arxiv(classic_setups=None, user_id=None):
     return existing, new
 
 
-def _import_authors(classic_setups=None, user_id=None):
+def _import_authors(classic_setups=None, user_id=None, active=True):
     existing = []
     new = []
     if not classic_setups or not user_id:
@@ -356,7 +371,7 @@ def _import_authors(classic_setups=None, user_id=None):
                           type='template',
                           template='authors',
                           name='Favorite Authors - Recent Papers',
-                          active=True,
+                          active=active,
                           stateful=True,
                           frequency='weekly',
                           data=data_all)
@@ -377,7 +392,7 @@ def _import_authors(classic_setups=None, user_id=None):
     return existing, new
 
 
-def _import_keywords(classic_setups=None, user_id=None):
+def _import_keywords(classic_setups=None, user_id=None, active=True):
     existing = []
     new = []
     if not classic_setups or not user_id:
@@ -447,7 +462,7 @@ def _import_keywords(classic_setups=None, user_id=None):
                               type='template',
                               template='keyword',
                               name=get_keyword_query_name(d),
-                              active=True,
+                              active=active,
                               stateful=False,
                               frequency='weekly',
                               data=d)
