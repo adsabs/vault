@@ -554,7 +554,7 @@ class TestServices(TestCaseDatabase):
     @httpretty.activate
     def test_myads_import(self):
         # can't use as anonymous user
-        user_id = 1
+        user_id = self.app.config.get('BOOTSTRAP_USER_ID')
         r = self.client.get(url_for('user.import_myads'),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
 
