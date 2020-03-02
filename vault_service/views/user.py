@@ -198,8 +198,8 @@ def store_data():
 
 
 @advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/notifications', methods=['GET', 'POST'])
-@bp.route('/notifications/<myads_id>', methods=['GET', 'PUT', 'DELETE'])
+@bp.route('/_notifications', methods=['GET', 'POST'])
+@bp.route('/_notifications/<myads_id>', methods=['GET', 'PUT', 'DELETE'])
 def myads_notifications(myads_id=None):
     """
     Manipulate one or all myADS notifications set up for a given user
@@ -626,7 +626,7 @@ def export(iso_datestring):
 
 
 @advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/myads-import', methods=['GET'])
+@bp.route('/_myads-import', methods=['GET'])
 def import_myads():
     '''
 
