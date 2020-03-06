@@ -638,6 +638,54 @@ class TestServices(TestCaseDatabase):
                                                 'sort': 'score desc, bibcode desc'}])
 
     @httpretty.activate
+    def test_myads_execute_notification(self):
+
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('VAULT_SOLR_QUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+                            "responseHeader":{
+                            "status":0, "QTime":0,
+                            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+                            "response":{"numFound":10456930,"start":0,"docs":[
+                              { "bibcode":"2005JGRC..110.4002G" },
+                              { "bibcode":"2005JGRC..110.4003N" },
+                              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        now = adsmutils.get_date().date()
+        beg_pubyear = (now - datetime.timedelta(days=180)).year
+
+        # can't use as anonymous user
+        user_id = self.app.config.get('BOOTSTRAP_USER_ID')
+        r = self.client.get(url_for('user.execute_myads_query', myads_id=123),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
+
+        self.assertStatus(r, 400)
+
+        user_id = 6
+
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'authors',
+                                              'data': 'author:"Kurtz, Michael"'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        query_id = r.json['id']
+
+        r = self.client.get(url_for('user.execute_myads_query', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
+
+        start_date = (adsmutils.get_date() - datetime.timedelta(days=25)).date()
+
+        self.assertStatus(r, 200)
+        self.assertEquals(r.json, [{'q': 'author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"] '
+                                            'pubdate:[{2}-00 TO *]'.format(start_date, now, beg_pubyear),
+                                       'sort': 'score desc, bibcode desc'}])
+
+    @httpretty.activate
     def test_myads_import(self):
         # can't use as anonymous user
         user_id = self.app.config.get('BOOTSTRAP_USER_ID')

@@ -554,6 +554,37 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
     return json.dumps(output), 200
 
 
+@advertise(scopes=[], rate_limit=[1000, 3600*24])
+@bp.route('/_notification_query/<myads_id>', methods=['GET'])
+def execute_myads_query(myads_id):
+    """
+    Returns the constructed query for a single templated myADS notification, ready to execute
+    :param myads_id: ID of a single notification
+    :return: list of dicts; constructed query, dates are such that it's meant to be run today:
+                    [{q: query params,
+                     sort: sort string}]
+    """
+
+    try:
+        payload, headers = check_request(request)
+    except Exception as e:
+        return json.dumps({'msg': e.message or e.description}), 400
+
+    user_id = int(headers['X-Adsws-Uid'])
+
+    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
+        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
+
+    with current_app.session_scope() as session:
+        setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
+        if setup is None:
+            return '{}', 404
+
+        query = _create_myads_query(setup.template, setup.frequency, setup.data, classes=setup.classes)
+
+    return json.dumps(query)
+
+
 def _create_myads_query(template_type, frequency, data, classes=None):
     """
     Creates a query based on the stored myADS setup (for templated queries only)
