@@ -227,10 +227,8 @@ def myads_notifications(myads_id=None):
                 if setup.query_id is not None:
                     q = session.query(Query).filter_by(id=setup.query_id).first()
                     qid = q.qid
-                    query = None
                 else:
                     qid = None
-                    query = _create_myads_query(setup.template, setup.frequency, setup.data, classes=setup.classes)
 
                 output = {'id': setup.id,
                           'name': setup.name,
@@ -242,7 +240,6 @@ def myads_notifications(myads_id=None):
                           'template': setup.template,
                           'classes': setup.classes,
                           'data': setup.data,
-                          'query': query,
                           'created': setup.created.isoformat(),
                           'updated': setup.updated.isoformat()}
 
@@ -641,32 +638,24 @@ def _create_myads_query(template_type, frequency, data, classes=None):
     elif template_type == 'authors':
         keywords = data
         start_date = (get_date() - datetime.timedelta(days=25)).date()
-        if classes:
-            classes = ' {}'.format('arxiv_class:(' + ' OR '.join([x + '.*' if '.' not in x else x for x in classes]) + ')')
-        else:
-            classes = ''
-        q = '{0}{1} entdate:["{2}Z00:00" TO "{3}Z23:59"] pubdate:[{4}-00 TO *]'.\
-            format(keywords, classes, start_date, end_date, beg_pubyear)
+        q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
+            format(keywords, start_date, end_date, beg_pubyear)
         sort = 'score desc, bibcode desc'
         out.append({'q': q, 'sort': sort})
     elif template_type == 'keyword':
         keywords = data
         start_date = (get_date() - datetime.timedelta(days=25)).date()
-        if classes:
-            classes = ' {}'.format('arxiv_class:(' + ' OR '.join([x + '.*' if '.' not in x else x for x in classes]) + ')')
-        else:
-            classes = ''
         # most recent
-        q = '{0}{1} entdate:["{2}Z00:00" TO "{3}Z23:59"] pubdate:[{4}-00 TO *]'.\
-            format(keywords, classes, start_date, end_date, beg_pubyear)
+        q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
+            format(keywords, start_date, end_date, beg_pubyear)
         sort = 'entry_date desc, bibcode desc'
         out.append({'q': q, 'sort': sort})
         # most popular
-        q = 'trending({0}{1})'.format(keywords, classes)
+        q = 'trending({0})'.format(keywords)
         sort = 'score desc, bibcode desc'
         out.append({'q': q, 'sort': sort})
         # most cited
-        q = 'useful({0}{1})'.format(keywords, classes)
+        q = 'useful({0})'.format(keywords)
         sort = 'score desc, bibcode desc'
         out.append({'q': q, 'sort': sort})
 

@@ -355,11 +355,6 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['type'], 'template')
         self.assertEquals(r.json[0]['template'], 'keyword')
         self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2')
-        self.assertEquals(r.json[0]['query'], [{'q': 'keyword1 OR keyword2 entdate:["{0}Z00:00" TO "{1}Z23:59"] '
-                                                     'pubdate:[{2}-00 TO *]'.format(start_date, now, beg_pubyear),
-                                                'sort': 'entry_date desc, bibcode desc'},
-                                               {'q': 'trending(keyword1 OR keyword2)', 'sort': 'score desc, bibcode desc'},
-                                               {'q': 'useful(keyword1 OR keyword2)', 'sort': 'score desc, bibcode desc'}])
 
         # try to retrieve a query without a user ID in the headers
         r = self.client.get(url_for('user.myads_notifications', myads_id=query_id),
@@ -378,11 +373,6 @@ class TestServices(TestCaseDatabase):
         self.assertFalse(r.json[0]['stateful'])
         self.assertEquals(r.json[0]['frequency'], 'weekly')
         self.assertEquals(r.json[0]['type'], 'template')
-        self.assertEquals(r.json[0]['query'], [{'q': 'keyword1 OR keyword2 entdate:["{0}Z00:00" TO "{1}Z23:59"] '
-                                                     'pubdate:[{2}-00 TO *]'.format(start_date, now, beg_pubyear),
-                                                'sort': 'entry_date desc, bibcode desc'},
-                                               {'q': 'trending(keyword1 OR keyword2)', 'sort': 'score desc, bibcode desc'},
-                                               {'q': 'useful(keyword1 OR keyword2)', 'sort': 'score desc, bibcode desc'}])
 
         # successfully delete the query setup
         r = self.client.delete(url_for('user.myads_notifications', myads_id=query_id),
@@ -432,14 +422,6 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['template'], 'arxiv')
         self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2')
         self.assertEquals(r.json[0]['classes'], [u'astro-ph'])
-        self.assertEquals(r.json[0]['query'], [{'q': 'bibstem:arxiv (arxiv_class:(astro-ph.*) (keyword1 OR keyword2)) '
-                                                     'entdate:["{0}Z00:00" TO "{1}Z23:59"] pubdate:[{2}-00 TO *]'.
-                                                     format(start_date, now, beg_pubyear),
-                                                'sort': 'score desc, bibcode desc'},
-                                               {'q': 'bibstem:arxiv (arxiv_class:(astro-ph.*) NOT (keyword1 OR keyword2))'
-                                                     ' entdate:["{0}Z00:00" TO "{1}Z23:59"] pubdate:[{2}-00 TO *]'.
-                                                     format(start_date, now, beg_pubyear),
-                                                'sort': 'bibcode desc'}])
 
         # edit the stored query
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
@@ -505,14 +487,6 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['template'], 'arxiv')
         self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2 OR keyword3')
         self.assertEquals(r.json[0]['classes'], ['astro-ph'])
-        self.assertEquals(r.json[0]['query'], [{'q': 'bibstem:arxiv (arxiv_class:(astro-ph.*) (keyword1 OR keyword2 OR keyword3)) '
-                                                     'entdate:["{0}Z00:00" TO "{1}Z23:59"] pubdate:[{2}-00 TO *]'.
-                          format(start_date, now, beg_pubyear),
-                                                'sort': 'score desc, bibcode desc'},
-                                               {'q': 'bibstem:arxiv (arxiv_class:(astro-ph.*) NOT (keyword1 OR keyword2 OR keyword3))'
-                                                     ' entdate:["{0}Z00:00" TO "{1}Z23:59"] pubdate:[{2}-00 TO *]'.
-                          format(start_date, now, beg_pubyear),
-                                                'sort': 'bibcode desc'}])
 
         # add a second query
         r = self.client.post(url_for('user.myads_notifications'),
@@ -607,8 +581,6 @@ class TestServices(TestCaseDatabase):
         self.assertTrue(r.json[0]['stateful'])
         self.assertEquals(r.json[0]['frequency'], 'weekly')
         self.assertEquals(r.json[0]['type'], 'template')
-        self.assertEquals(r.json[0]['query'], [{'q': 'citations(author:"Kurtz, Michael")',
-                                                'sort': 'entry_date desc, bibcode desc'}])
 
         # test the author query construction
         r = self.client.post(url_for('user.myads_notifications'),
@@ -633,9 +605,6 @@ class TestServices(TestCaseDatabase):
         self.assertTrue(r.json[0]['stateful'])
         self.assertEquals(r.json[0]['frequency'], 'weekly')
         self.assertEquals(r.json[0]['type'], 'template')
-        self.assertEquals(r.json[0]['query'], [{'q': 'author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"] '
-                                                     'pubdate:[{2}-00 TO *]'.format(start_date, now, beg_pubyear),
-                                                'sort': 'score desc, bibcode desc'}])
 
     @httpretty.activate
     def test_myads_execute_notification(self):
