@@ -5,6 +5,7 @@ from flask import request, url_for
 import json
 import md5
 import urlparse
+import datetime
 
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
@@ -12,7 +13,7 @@ from ..models import Query, User, MyADS
 from .utils import check_request, cleanup_payload, make_solr_request, upsert_myads, get_keyword_query_name
 from flask_discoverer import advertise
 from dateutil import parser
-import adsmutils
+from adsmutils import get_date
 
 bp = Blueprint('user', __name__)
 
@@ -550,6 +551,116 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
     return json.dumps(output), 200
 
 
+@advertise(scopes=[], rate_limit=[1000, 3600*24])
+@bp.route('/_notification_query/<myads_id>', methods=['GET'])
+def execute_myads_query(myads_id):
+    """
+    Returns the constructed query for a single templated myADS notification, ready to execute
+    :param myads_id: ID of a single notification
+    :return: list of dicts; constructed query, dates are such that it's meant to be run today:
+                    [{q: query params,
+                     sort: sort string}]
+    """
+
+    try:
+        payload, headers = check_request(request)
+    except Exception as e:
+        return json.dumps({'msg': e.message or e.description}), 400
+
+    user_id = int(headers['X-Adsws-Uid'])
+
+    if user_id == current_app.config['BOOTSTRAP_USER_ID']:
+        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
+
+    with current_app.session_scope() as session:
+        setup = session.query(MyADS).filter_by(user_id=user_id).filter_by(id=myads_id).first()
+        if setup is None:
+            return '{}', 404
+
+        query = _create_myads_query(setup.template, setup.frequency, setup.data, classes=setup.classes)
+
+    return json.dumps(query)
+
+
+def _create_myads_query(template_type, frequency, data, classes=None):
+    """
+    Creates a query based on the stored myADS setup (for templated queries only)
+    :param frequency: daily or weekly
+    :param data: keywords or other stored query template data
+    :param classes: arXiv classes, only required for arXiv template queries
+    :return: out: list of dicts; constructed query, dates are such that it's meant to be run today:
+                    [{q: query params,
+                     sort: sort string}]
+    """
+
+    out = []
+    beg_pubyear = (get_date() - datetime.timedelta(days=180)).year
+    end_date = get_date().date()
+
+    if template_type == 'arxiv':
+        if not classes:
+            raise Exception('Classes must be provided for an arXiv templated query')
+        if type(classes) != list:
+            tmp = [classes]
+        else:
+            tmp = classes
+        classes = 'arxiv_class:(' + ' OR '.join([x + '.*' if '.' not in x else x for x in tmp]) + ')'
+        keywords = data
+        if frequency == 'daily':
+            connector = [' ', ' NOT ']
+            # keyword search should be sorted by score, "other recent" should be sorted by bibcode
+            sort_w_keywords = ['score desc, bibcode desc', 'bibcode desc']
+            # on Mondays, deal with the weekend properly
+            if get_date().weekday() == 0:
+                start_date = (get_date() - datetime.timedelta(days=2)).date()
+            else:
+                start_date = get_date().date()
+        elif frequency == 'weekly':
+            connector = [' ']
+            sort_w_keywords = ['score desc, bibcode desc']
+            start_date = (get_date() - datetime.timedelta(days=25)).date()
+        if not keywords:
+            q = 'bibstem:arxiv {0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
+                     format(classes, start_date, end_date, beg_pubyear)
+            sort = 'bibcode desc'
+            out.append({'q': q, 'sort': sort})
+        else:
+            for c, s in zip(connector, sort_w_keywords):
+                q = 'bibstem:arxiv ({0}{1}({2})) entdate:["{3}Z00:00" TO "{4}Z23:59"] pubdate:[{5}-00 TO *]'.\
+                    format(classes, c, keywords, start_date, end_date, beg_pubyear)
+                sort = s
+                out.append({'q': q, 'sort': sort})
+    elif template_type == 'citations':
+        keywords = data
+        q = 'citations({0})'.format(keywords)
+        sort = 'entry_date desc, bibcode desc'
+        out.append({'q': q, 'sort': sort})
+    elif template_type == 'authors':
+        keywords = data
+        start_date = (get_date() - datetime.timedelta(days=25)).date()
+        q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
+            format(keywords, start_date, end_date, beg_pubyear)
+        sort = 'score desc, bibcode desc'
+        out.append({'q': q, 'sort': sort})
+    elif template_type == 'keyword':
+        keywords = data
+        start_date = (get_date() - datetime.timedelta(days=25)).date()
+        # most recent
+        q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
+            format(keywords, start_date, end_date, beg_pubyear)
+        sort = 'entry_date desc, bibcode desc'
+        out.append({'q': q, 'sort': sort})
+        # most popular
+        q = 'trending({0})'.format(keywords)
+        sort = 'score desc, bibcode desc'
+        out.append({'q': q, 'sort': sort})
+        # most cited
+        q = 'useful({0})'.format(keywords)
+        sort = 'score desc, bibcode desc'
+        out.append({'q': q, 'sort': sort})
+
+    return out
+
 @advertise(scopes=['ads-consumer:myads'], rate_limit = [1000, 3600*24])
 @bp.route('/get-myads/<user_id>', methods=['GET'])
 def get_myads(user_id):
@@ -590,11 +701,17 @@ def get_myads(user_id):
                 try:
                     q = session.query(Query).filter_by(id=s.query_id).one()
                     qid = q.qid
+                    query = None
                 except ormexc.NoResultFound:
                     qid = None
+                    query = None
+
             else:
                 qid = None
+                query = _create_myads_query(s.template, s.frequency, s.data, classes=s.classes)
+
             o['qid'] = qid
+            o['query'] = query
 
             output.append(o)
 
