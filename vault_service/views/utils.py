@@ -334,21 +334,21 @@ def _import_authors(classic_setups=None, user_id=None, active=True):
     data_all = ''
     if classic_setups.get('phy_aut'):
         author_list = classic_setups.get('phy_aut').split('\r\n')
-        data = ' OR '.join(['author:"' + x + '"' for x in author_list])
+        data = ' OR '.join(['author:"' + x + '"' for x in author_list if x])
         if data not in data_all:
             if len(data_all) > 0:
                 data = ' OR ' + data
             data_all += data
     if classic_setups.get('pre_aut'):
         author_list = classic_setups.get('pre_aut').split('\r\n')
-        data = ' OR '.join(['author:"' + x + '"' for x in author_list])
+        data = ' OR '.join(['author:"' + x + '"' for x in author_list if x])
         if data not in data_all:
             if len(data_all) > 0:
                 data = ' OR ' + data
             data_all += data
     if classic_setups.get('ast_aut'):
         author_list = classic_setups.get('ast_aut').split('\r\n')
-        data = ' OR '.join(['author:"' + x + '"' for x in author_list])
+        data = ' OR '.join(['author:"' + x + '"' for x in author_list if x])
         if data not in data_all:
             if len(data_all) > 0:
                 data = ' OR ' + data
