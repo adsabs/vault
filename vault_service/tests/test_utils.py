@@ -40,7 +40,7 @@ class TestServices(TestCaseDatabase):
     @httpretty.activate
     def test_upsert_myads(self):
         user_id = 5
-        classic_setup = {"ast_aut": "Lockwood, G.\r\nKurtz, M.",
+        classic_setup = {"ast_aut": "Accomazzi, A.\r\nKurtz, M.",
                          "ast_t1": "photosphere\r\nchromosphere\r\n",
                          "ast_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
                          "email": "gwl@lowell.edi",
@@ -50,7 +50,7 @@ class TestServices(TestCaseDatabase):
                          ],
                          "id": 2060288,
                          "lastname": "",
-                         "phy_aut": "Lockwood, G.",
+                         "phy_aut": "Lockwood, G.\r\n",
                          "phy_t1": "photosphere\r\nchromosphere\r\n",
                          "phy_t2": "\"climate change\"\r\n\"global warming\"\r\n\"solar variation\"",
                          "pre_aut": "Lockwood, G.",
@@ -64,6 +64,9 @@ class TestServices(TestCaseDatabase):
         with self.app.session_scope() as session:
             q = session.query(MyADS).filter_by(user_id=user_id).all()
             self.assertEquals(len(q), 4)
+            # make sure the blank author is removed
+            self.assertEquals(q[1].data, 'author:"Lockwood, G." OR author:"Accomazzi, A." OR author:"Kurtz, M."')
+
         self.assertEquals(len(existing_setups), 0)
         self.assertEquals(len(new_setups), 4)
         self.assertEquals(new_setups[2], {'id': 3,
