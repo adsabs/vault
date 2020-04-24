@@ -199,8 +199,8 @@ def store_data():
 
 
 @advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/_notifications', methods=['GET', 'POST'])
-@bp.route('/_notifications/<myads_id>', methods=['GET', 'PUT', 'DELETE'])
+@bp.route('/notifications', methods=['GET', 'POST'])
+@bp.route('/notifications/<myads_id>', methods=['GET', 'PUT', 'DELETE'])
 def myads_notifications(myads_id=None):
     """
     Manipulate one or all myADS notifications set up for a given user
@@ -552,7 +552,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
 
 
 @advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/_notification_query/<myads_id>', methods=['GET'])
+@bp.route('/notification_query/<myads_id>', methods=['GET'])
 def execute_myads_query(myads_id):
     """
     Returns the constructed query for a single templated myADS notification, ready to execute
@@ -743,7 +743,7 @@ def export(iso_datestring):
 
 
 @advertise(scopes=[], rate_limit=[1000, 3600*24])
-@bp.route('/_myads-import', methods=['GET'])
+@bp.route('/myads-import', methods=['GET'])
 def import_myads():
     '''
 
