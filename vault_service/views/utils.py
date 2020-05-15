@@ -90,9 +90,7 @@ def check_request(request):
         payload.update(dict(request.form))
 
     new_headers = {}
-    if headers['Authorization']:
-        new_headers['X-Forwarded-Authorization'] = headers['Authorization']
-    new_headers['Authorization'] = 'Bearer:' + current_app.config['VAULT_OAUTH_CLIENT_TOKEN']
+    new_headers['Authorization'] = request.headers.get('X-Forwarded-Authorization', request.headers.get('Authorization', ''))
     new_headers['X-Adsws-Uid'] = headers.get('X-Adsws-Uid', str(current_app.config['BOOTSTRAP_USER_ID'])) # User ID
 
     return (payload, new_headers)
