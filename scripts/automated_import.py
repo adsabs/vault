@@ -48,7 +48,7 @@ def import_from_classic(filename=None, do_import=False, email_address=None, forc
         force = force
         user_id = None
         r = current_app.client.get(current_app.config['USER_EMAIL_ADSWS_API_URL'] % k,
-                                   headers={'Authorization': 'Bearer {0}'.format(current_app.config['VAULT_OAUTH_CLIENT_TOKEN'])})
+                                   headers={'Authorization': current_app.config['SERVICE_TOKEN']})
         if r.status_code == 200:
             user_id = r.json()['id']
         # if not, check if k exists in harbour (and get user_id)

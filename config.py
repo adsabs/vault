@@ -1,5 +1,4 @@
 LOG_STDOUT = True
-VAULT_OAUTH_CLIENT_TOKEN = 'to be provided'
 VAULT_VERSION = 'v0.1' # Arbitrary string identifying the service (will be returned in the headers)
 
 SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://postgres:postgres@localhost:5432/test_vault"
