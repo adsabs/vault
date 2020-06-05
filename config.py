@@ -1,4 +1,9 @@
 LOG_STDOUT = True
+
+# must be here for adsmutils to override it using env vars
+# but if left empty (resolving to False) it won't be used
+SERVICE_TOKEN = None
+
 VAULT_VERSION = 'v0.1' # Arbitrary string identifying the service (will be returned in the headers)
 
 SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://postgres:postgres@localhost:5432/test_vault"
