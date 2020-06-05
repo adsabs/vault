@@ -185,6 +185,8 @@ def store_data():
                     except TypeError:
                         data = {}
 
+            if type(data) is not dict:
+                data = {}
             data.update(payload)
             q.user_data = data
 
