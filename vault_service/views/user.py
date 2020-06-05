@@ -753,8 +753,14 @@ def import_myads():
         payload, headers = check_request(request)
     except Exception as e:
         return json.dumps({'msg': e.message or e.description}), 400
-
+    
+    # this header is always set by adsws, so we trust it
     user_id = int(headers['X-Adsws-Uid'])
+    
+    # use service token here; elevated operation
+    if current_app.config.get('SERVICE_TOKEN', None):
+        headers['Authorization'] = current_app.config['SERVICE_TOKEN']
+    
 
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
