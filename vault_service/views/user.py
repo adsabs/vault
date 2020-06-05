@@ -185,6 +185,8 @@ def store_data():
                     except TypeError:
                         data = {}
 
+            if data is None:
+                data = {}
             data.update(payload)
             q.user_data = data
 
@@ -239,7 +241,7 @@ def myads_notifications(myads_id=None):
                           'frequency': setup.frequency,
                           'template': setup.template,
                           'classes': setup.classes,
-                          'data': setup.data,
+                          'data': setup.data.encode('utf-8') if setup.data else setup.data,
                           'created': setup.created.isoformat(),
                           'updated': setup.updated.isoformat()}
 
@@ -260,7 +262,7 @@ def myads_notifications(myads_id=None):
                          'active': s.active,
                          'frequency': s.frequency,
                          'template': s.template,
-                         'data': s.data,
+                         'data': s.data.encode('utf-8') if s.data else s.data,
                          'created': s.created.isoformat(),
                          'updated': s.updated.isoformat()}
                     output.append(o)
@@ -474,15 +476,15 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                 if payload.get('name', None) and payload.get('name') != setup.name:
                     setup.name = payload.get('name')
                 # if name wasn't provided, check saved name - update if templated name
-                elif setup.data and setup.name == name_template.format(get_keyword_query_name(setup.data)):
-                    setup.name = name_template.format(get_keyword_query_name(payload.get('data', setup.data)))
+                elif setup.data and setup.name == name_template.format(get_keyword_query_name(setup.data.encode('utf-8'))):
+                    setup.name = name_template.format(get_keyword_query_name(payload.get('data', setup.data.encode('utf-8'))))
                 # if name wasn't provided and previous name wasn't templated, keep whatever was there
             elif payload.get('template', setup.template) == 'citations':
                 name_template = '{0} - Citations'
                 if payload.get('name', None) and payload.get('name') != setup.name:
                     setup.name = payload.get('name')
-                elif setup.name == name_template.format(setup.data):
-                    setup.name = name_template.format(payload.get('data', setup.data))
+                elif setup.data and setup.name == name_template.format(setup.data.encode('utf-8')):
+                    setup.name = name_template.format(payload.get('data', setup.data.encode('utf-8')))
             elif payload.get('template', setup.template) == 'authors':
                 if payload.get('name', None) and payload.get('name') != setup.name:
                     setup.name = payload.get('name')
@@ -490,13 +492,16 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                 name_template = '{0}'
                 if payload.get('name', None) and payload.get('name') != setup.name:
                     setup.name = payload.get('name')
-                elif setup.name == name_template.format(setup.data):
-                    setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data)))
+                elif setup.data and setup.name == name_template.format(setup.data.encode('utf-8')):
+                    setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data.encode('utf-8'))))
             else:
                 return json.dumps({'msg': 'Wrong template type passed'}), 400
             if payload.get('data', None) and not isinstance(payload.get('data', setup.data), basestring):
                 return json.dumps({'msg': 'Bad data passed; data keyword should be a string'}), 400
-            setup.data = payload.get('data', setup.data)
+            if setup.data:
+                setup.data = payload.get('data', setup.data.encode('utf-8'))
+            else:
+                setup.data = payload.get('data')
             if payload.get('template', setup.template) == 'arxiv':
                 if not isinstance(payload.get('classes', setup.classes), list):
                     return json.dumps({'msg': 'Bad data passed; classes keyword should be a list'}), 400
@@ -544,7 +549,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                   'frequency': setup.frequency,
                   'template': setup.template,
                   'classes': setup.classes,
-                  'data': setup.data,
+                  'data': setup.data.encode('utf-8') if setup.data else setup.data,
                   'created': setup.created.isoformat(),
                   'updated': setup.updated.isoformat()}
 
@@ -577,7 +582,8 @@ def execute_myads_query(myads_id):
         if setup is None:
             return '{}', 404
 
-        query = _create_myads_query(setup.template, setup.frequency, setup.data, classes=setup.classes)
+        data = setup.data.encode('utf-8') if setup.data else setup.data
+        query = _create_myads_query(setup.template, setup.frequency, data, classes=setup.classes)
 
     return json.dumps(query)
 
@@ -693,7 +699,7 @@ def get_myads(user_id):
                  'frequency': s.frequency,
                  'template': s.template,
                  'classes': s.classes,
-                 'data': s.data,
+                 'data': s.data.encode('utf-8') if s.data else s.data,
                  'created': s.created.isoformat(),
                  'updated': s.updated.isoformat()}
 
@@ -708,7 +714,8 @@ def get_myads(user_id):
 
             else:
                 qid = None
-                query = _create_myads_query(s.template, s.frequency, s.data, classes=s.classes)
+                data = s.data.encode('utf-8') if s.data else s.data
+                query = _create_myads_query(s.template, s.frequency, data, classes=s.classes)
 
             o['qid'] = qid
             o['query'] = query

@@ -167,7 +167,7 @@ class TestServices(TestCaseDatabase):
                 content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json == {'foo': 'bar'}, 'missing data')
+        self.assert_(r.json == {'foo': 'bar'}, 'missing data ({})'.format(json.dumps(r.json)))
 
         # save something else
         r = self.client.post(url_for('user.store_data'),
@@ -184,7 +184,7 @@ class TestServices(TestCaseDatabase):
                             content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb'}, 'missing data')
+        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb'}, 'missing data ({})'.format(json.dumps(r.json)))
 
         # modify it
         r = self.client.post(url_for('user.store_data'),
@@ -201,7 +201,7 @@ class TestServices(TestCaseDatabase):
                             content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb2'}, 'missing data')
+        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb2'}, 'missing data ({})'.format(json.dumps(r.json)))
 
     def test_myads_retrieval(self):
         '''Tests pipeline retrieval of myADS setup and users'''
