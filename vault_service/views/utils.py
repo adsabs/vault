@@ -488,16 +488,22 @@ def get_keyword_query_name(keywords, database=None):
     :param database: database (physics, astronomy, arxiv) to be included in query name, if needed
     :return: first word or phrase
     """
-    key_list = keywords.split(' ')
-    first = key_list[0]
 
-    if '"' in first and len(key_list) > 1:
-        phrase = first
-        i = 1
-        while '"' not in key_list[i]:
-            phrase = phrase + ' ' + key_list[i]
-            i += 1
-        first = phrase + ' ' + key_list[i]
+    # This regular expression matches any first word not in quotes (e.g., star)
+    # or group of one or more words in quotes (e.g., "star" or "gravitational waves")
+    first_phrase_or_word_pattern = r'^(?P<keyword>"([^"]*)"|[^ "]+)'
+    first = None
+    matches = re.match(first_phrase_or_word_pattern, keywords)
+    if matches:
+        keyword = matches.groupdict().get('keyword')
+        if keyword:
+            first = keyword
+
+    if not first:
+        # Safety control, just in case there is bad data such as '"star' that
+        # does not match the previous regex, grab at least something:
+        key_list = keywords.split(' ')
+        first = key_list[0]
 
     if first != keywords:
         first = first + ', etc.'
