@@ -44,7 +44,13 @@ def cleanup_payload(payload):
 
     # clean up
     for k,v in pointer.items():
-        if k[0] == 'q' or k[0:2] == 'fq':
+        if k[0] == 'q':
+            # Convert to UTF-8, otherwise queries with accents will fail later on
+            if isinstance(v, basestring):
+                query[k] = v.encode('utf-8')
+            elif isinstance(v, (list, tuple)):
+                query[k] = [e.encode('utf-8') if isinstance(e, basestring) else e for e in v]
+        elif k[0:2] == 'fq':
             query[k] = v
 
     # make sure the bigquery is just a string
