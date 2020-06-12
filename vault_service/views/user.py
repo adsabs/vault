@@ -342,7 +342,13 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             solrq = 'q=' + payload.get('data') + '&wt=json'
             r = make_solr_request(query=solrq, headers=headers)
             if r.status_code != 200:
-                return json.dumps({'msg': 'Could not verify the query: {0}; reason: {1}'.format(payload, r.text)}), 400
+                data = payload.get('data')
+                if data:
+                    payload['data'] = data.encode('utf-8')
+                response_text = r.text
+                if response_text:
+                    response_text = response_text.encode('utf-8')
+                return json.dumps({'msg': 'Could not verify the query: {0}; reason: {1}'.format(payload, response_text)}), 400
 
         # add metadata
         if payload['template'] == 'arxiv':
@@ -352,7 +358,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             stateful = False
             frequency = payload.get('frequency', 'daily')
             if payload.get('data', None):
-                name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
+                name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data'].encode('utf-8')))
             else:
                 name = 'Recent Papers'
         elif payload['template'] == 'citations':
@@ -361,7 +367,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             data = payload['data']
             stateful = True
             frequency = 'weekly'
-            name = '{0} - Citations'.format(payload['data'])
+            name = '{0} - Citations'.format(payload['data'].encode('utf-8'))
         elif payload['template'] == 'authors':
             template = 'authors'
             classes = None
@@ -373,7 +379,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             template = 'keyword'
             classes = None
             data = payload['data']
-            name = '{0}'.format(get_keyword_query_name(payload['data']))
+            name = '{0}'.format(get_keyword_query_name(payload['data']).encode('utf-8'))
             stateful = False
             frequency = 'weekly'
         else:
@@ -477,14 +483,18 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                     setup.name = payload.get('name')
                 # if name wasn't provided, check saved name - update if templated name
                 elif setup.data and setup.name == name_template.format(get_keyword_query_name(setup.data.encode('utf-8'))):
-                    setup.name = name_template.format(get_keyword_query_name(payload.get('data', setup.data.encode('utf-8'))))
+                    setup_data = payload.get('data', setup.data)
+                    if setup_data:
+                        setup.name = name_template.format(get_keyword_query_name(setup_data.encode('utf-8')))
                 # if name wasn't provided and previous name wasn't templated, keep whatever was there
             elif payload.get('template', setup.template) == 'citations':
                 name_template = '{0} - Citations'
                 if payload.get('name', None) and payload.get('name') != setup.name:
                     setup.name = payload.get('name')
                 elif setup.data and setup.name == name_template.format(setup.data.encode('utf-8')):
-                    setup.name = name_template.format(payload.get('data', setup.data.encode('utf-8')))
+                    setup_data = payload.get('data', setup.data)
+                    if setup_data:
+                        setup.name = name_template.format(setup_data.encode('utf-8'))
             elif payload.get('template', setup.template) == 'authors':
                 if payload.get('name', None) and payload.get('name') != setup.name:
                     setup.name = payload.get('name')
@@ -493,7 +503,9 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                 if payload.get('name', None) and payload.get('name') != setup.name:
                     setup.name = payload.get('name')
                 elif setup.data and setup.name == name_template.format(setup.data.encode('utf-8')):
-                    setup.name = '{0}'.format(get_keyword_query_name(payload.get('data', setup.data.encode('utf-8'))))
+                    setup_data = payload.get('data', setup.data)
+                    if setup_data:
+                        setup.name = '{0}'.format(get_keyword_query_name(setup_data.encode('utf-8')))
             else:
                 return json.dumps({'msg': 'Wrong template type passed'}), 400
             if payload.get('data', None) and not isinstance(payload.get('data', setup.data), basestring):
@@ -760,14 +772,14 @@ def import_myads():
         payload, headers = check_request(request)
     except Exception as e:
         return json.dumps({'msg': e.message or e.description}), 400
-    
+
     # this header is always set by adsws, so we trust it
     user_id = int(headers['X-Adsws-Uid'])
-    
+
     # use service token here; elevated operation
     if current_app.config.get('SERVICE_TOKEN', None):
         headers['Authorization'] = current_app.config['SERVICE_TOKEN']
-    
+
 
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
