@@ -496,31 +496,33 @@ def get_keyword_query_name(keywords, database=None):
     """
 
     keywords = keywords.strip()
-    if len(keywords) > 25:
-        # This regular expression matches any first word not in quotes (e.g., star)
-        # or group of one or more words in quotes (e.g., "star" or "gravitational waves")
-        first_phrase_or_word_pattern = r'^(?P<keyword>"([^"]*)"|[^ "]+)'
-        first = None
-        matches = re.match(first_phrase_or_word_pattern, keywords)
-        if matches:
-            keyword = matches.groupdict().get('keyword')
-            if keyword:
-                first = keyword
+    # This regular expression matches any first word not in quotes (e.g., star)
+    # or group of one or more words in quotes (e.g., "star" or "gravitational waves")
+    # and the whole keywords can be wrapped in parenthesis (they will be ignored)
+    first_phrase_or_word_pattern = r'^[\(]*(?P<keyword>"([^"\(\)]*)"|[^ \(\)"]+)[\)]*'
+    first = None
+    matches = re.match(first_phrase_or_word_pattern, keywords)
+    if matches:
+        keyword = matches.groupdict().get('keyword')
+        if keyword:
+            first = keyword
 
-        if not first or len(first) <= 2:
-            # Safety control, just in case there is bad data such as '"star' that
-            # does not match the previous regex, or the match is too small such as
-            # '+(' from query like '+(star OR planets)', grab at least something:
-            key_list = keywords.split(' ')
-            first = key_list[0]
+    if not first or len(first) <= 2:
+        # Safety control, just in case there is bad data such as '"star' that
+        # does not match the previous regex, or the match is too small such as
+        # '+(' from query like '+(star OR planets)', grab at least something:
+        key_list = keywords.split(' ')
+        first = key_list[0].strip('(').strip(')')
 
-        # Make sure it is not an extremely long string
-        first = first[:100]
-    else:
-        first = keywords
+    # Make sure it is not an extremely long string
+    first = first[:100]
 
-    if first != keywords:
+    if first != keywords and len(first) > 0:
         first = first + ', etc.'
+
+    # Make sure there is some result
+    if len(first) == 0:
+        first = "-"
 
     if database:
         if database == 'physics':
@@ -532,4 +534,4 @@ def get_keyword_query_name(keywords, database=None):
         else:
             current_app.logger.warning('Database {} is invalid'.format(database))
 
-    return first.strip('(').strip('+')
+    return first.strip('+')

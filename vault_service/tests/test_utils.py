@@ -139,8 +139,13 @@ class TestServices(TestCaseDatabase):
     def test_keyword_query_name(self):
         for (test, expected) in [('one', 'one'),
                                  ('"one"', '"one"'),
+                                 ('', '-'),
+                                 ('(())', '-'),
+                                 (('a'*99)+'bccc OR star', ('a'*99)+'b, etc.'), # Extremely long term
                                  ('(one or two)', 'one, etc.'),
+                                 ('(one or two or three or four or five)', 'one, etc.'),
                                  ('one or two', 'one, etc.'),
+                                 ('one or two or three or four or five', 'one, etc.'),
                                  ('((foo and bar) or baz)', 'foo, etc.'),
                                  ('+EUV coronal waves', 'EUV, etc.'),
                                  ('\"shell galaxies\" OR \"shell galaxy\"', '"shell galaxies", etc.')]:
