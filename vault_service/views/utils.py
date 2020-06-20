@@ -495,9 +495,11 @@ def get_keyword_query_name(keywords, database=None):
     :return: first word or phrase
     """
 
+    keywords = keywords.strip()
     # This regular expression matches any first word not in quotes (e.g., star)
     # or group of one or more words in quotes (e.g., "star" or "gravitational waves")
-    first_phrase_or_word_pattern = r'^(?P<keyword>"([^"]*)"|[^ "]+)'
+    # and the whole keywords can be wrapped in parenthesis (they will be ignored)
+    first_phrase_or_word_pattern = r'^[\(]*(?P<keyword>"([^"\(\)]*)"|[^ \(\)"]+)[\)]*'
     first = None
     matches = re.match(first_phrase_or_word_pattern, keywords)
     if matches:
@@ -505,14 +507,22 @@ def get_keyword_query_name(keywords, database=None):
         if keyword:
             first = keyword
 
-    if not first:
+    if not first or len(first) <= 2:
         # Safety control, just in case there is bad data such as '"star' that
-        # does not match the previous regex, grab at least something:
+        # does not match the previous regex, or the match is too small such as
+        # '+(' from query like '+(star OR planets)', grab at least something:
         key_list = keywords.split(' ')
-        first = key_list[0]
+        first = key_list[0].strip('(').strip(')')
 
-    if first != keywords:
+    # Make sure it is not an extremely long string
+    first = first[:100]
+
+    if first != keywords and len(first) > 0:
         first = first + ', etc.'
+
+    # Make sure there is some result
+    if len(first) == 0:
+        first = "-"
 
     if database:
         if database == 'physics':
@@ -524,4 +534,4 @@ def get_keyword_query_name(keywords, database=None):
         else:
             current_app.logger.warning('Database {} is invalid'.format(database))
 
-    return first.strip('(').strip('+')
+    return first.strip('+')
