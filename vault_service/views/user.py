@@ -595,10 +595,25 @@ def execute_myads_query(myads_id):
             return '{}', 404
 
         data = setup.data.encode('utf-8') if setup.data else setup.data
+        if data is None and setup.query_id:
+            data = _get_general_query_data(session, setup.query_id)
         query = _create_myads_query(setup.template, setup.frequency, data, classes=setup.classes)
 
     return json.dumps(query)
 
+def _get_general_query_data(session, query_id):
+    """
+    Retrieve general myADS query stored in a qid and parse it to return a dict
+    """
+    data = {}
+    q = session.query(Query).filter_by(id=query_id).one()
+    if q and q.query:
+        query = json.loads(q.query).get('query')
+        if query:
+            # Parse query string such as:
+            # u'fq=%7B%21type%3Daqp+v%3D%24fq_database%7D&fq_database=%28database%3Aastronomy%29&q=star&sort=citation_count+desc%2C+bibcode+desc'
+            data = urlparse.parse_qs(query)
+    return data
 
 def _create_myads_query(template_type, frequency, data, classes=None):
     """
@@ -614,6 +629,15 @@ def _create_myads_query(template_type, frequency, data, classes=None):
     out = []
     beg_pubyear = (get_date() - datetime.timedelta(days=180)).year
     end_date = get_date().date()
+    if template_type in ('arxiv', None):
+        if frequency == 'daily':
+            # on Mondays, deal with the weekend properly
+            if get_date().weekday() == 0:
+                start_date = (get_date() - datetime.timedelta(days=2)).date()
+            else:
+                start_date = get_date().date()
+        elif frequency == 'weekly':
+            start_date = (get_date() - datetime.timedelta(days=25)).date()
 
     if template_type == 'arxiv':
         if not classes:
@@ -628,15 +652,9 @@ def _create_myads_query(template_type, frequency, data, classes=None):
             connector = [' ', ' NOT ']
             # keyword search should be sorted by score, "other recent" should be sorted by bibcode
             sort_w_keywords = ['score desc, bibcode desc', 'bibcode desc']
-            # on Mondays, deal with the weekend properly
-            if get_date().weekday() == 0:
-                start_date = (get_date() - datetime.timedelta(days=2)).date()
-            else:
-                start_date = get_date().date()
         elif frequency == 'weekly':
             connector = [' ']
             sort_w_keywords = ['score desc, bibcode desc']
-            start_date = (get_date() - datetime.timedelta(days=25)).date()
         if not keywords:
             q = 'bibstem:arxiv {0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
                      format(classes, start_date, end_date, beg_pubyear)
@@ -676,6 +694,19 @@ def _create_myads_query(template_type, frequency, data, classes=None):
         q = 'useful({0})'.format(keywords)
         sort = 'score desc, bibcode desc'
         out.append({'q': q, 'sort': sort})
+    elif template_type is None and data:
+        # General query
+        general = data
+        # For consistency with the rest of templates, remove lists such as:
+        #   {u'fq': [u'{!type=aqp v=$fq_database}'],
+        #    u'fq_database': [u'(database:astronomy)'],
+        #    u'q': [u'star'],
+        #    u'sort': [u'citation_count desc, bibcode desc']}
+        # but only if there is only one element
+        out = {k: v[0] if isinstance(v, (list, tuple)) and len(v) == 1 else v for k, v in general.items()}
+        if 'q' in out:
+            out['q'] = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
+                format(out['q'], start_date, end_date, beg_pubyear)
 
     return out
 
