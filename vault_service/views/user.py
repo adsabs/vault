@@ -752,11 +752,12 @@ def get_myads(user_id):
                 try:
                     q = session.query(Query).filter_by(id=s.query_id).one()
                     qid = q.qid
-                    query = None
                 except ormexc.NoResultFound:
                     qid = None
                     query = None
-
+                else:
+                    data = _get_general_query_data(session, s.query_id)
+                    query = _create_myads_query(s.template, s.frequency, data, classes=s.classes)
             else:
                 qid = None
                 data = s.data.encode('utf-8') if s.data else s.data
