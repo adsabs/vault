@@ -633,11 +633,13 @@ def _create_myads_query(template_type, frequency, data, classes=None):
         if frequency == 'daily':
             # on Mondays, deal with the weekend properly
             if get_date().weekday() == 0:
-                start_date = (get_date() - datetime.timedelta(days=2)).date()
+                time_range = current_app.config.get('MYADS_DAILY_TIME_RANGE', 2)
+                start_date = (get_date() - datetime.timedelta(days=time_range)).date()
             else:
                 start_date = get_date().date()
         elif frequency == 'weekly':
-            start_date = (get_date() - datetime.timedelta(days=25)).date()
+            time_range = current_app.config.get('MYADS_WEEKLY_TIME_RANGE', 25)
+            start_date = (get_date() - datetime.timedelta(days=time_range)).date()
 
     if template_type == 'arxiv':
         if not classes:
