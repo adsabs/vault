@@ -50,7 +50,7 @@ def cleanup_payload(payload):
                 query[k] = v.encode('utf-8')
             elif isinstance(v, (list, tuple)):
                 query[k] = [e.encode('utf-8') if isinstance(e, basestring) else e for e in v]
-        elif k[0:2] == 'fq':
+        elif k[0:2] == 'fq' or k[0:4] == 'sort':
             query[k] = v
 
     # make sure the bigquery is just a string
