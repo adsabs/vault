@@ -697,18 +697,18 @@ def _create_myads_query(template_type, frequency, data, classes=None):
         sort = 'score desc, bibcode desc'
         out.append({'q': q, 'sort': sort})
     elif template_type is None and data:
-        # General query
-        general = data
-        # For consistency with the rest of templates, remove lists such as:
+        # General query - for consistency with the rest of templates,
+        # remove lists such as:
         #   {u'fq': [u'{!type=aqp v=$fq_database}'],
         #    u'fq_database': [u'(database:astronomy)'],
         #    u'q': [u'star'],
         #    u'sort': [u'citation_count desc, bibcode desc']}
         # but only if there is only one element
-        out = {k: v[0] if isinstance(v, (list, tuple)) and len(v) == 1 else v for k, v in general.items()}
-        if 'q' in out:
-            out['q'] = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
-                format(out['q'], start_date, end_date, beg_pubyear)
+        general = {k: v[0] if isinstance(v, (list, tuple)) and len(v) == 1 else v for k, v in data.items()}
+        if 'q' in general:
+            general['q'] = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
+                format(general['q'], start_date, end_date, beg_pubyear)
+        out.append(general)
 
     return out
 
