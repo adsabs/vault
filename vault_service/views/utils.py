@@ -97,7 +97,10 @@ def check_request(request):
 
     new_headers = {}
     # by default, this service will always use the user's token -- the service token should be inserted here only on exceptional occassions
-    new_headers['Authorization'] = request.headers.get('X-Forwarded-Authorization', request.headers.get('Authorization', ''))
+    access_token = request.headers.get('X-Forwarded-Authorization')
+    if access_token in (None, '-'): # Make sure it is not just '-' (default value for other microservices)
+        access_token = request.headers.get('Authorization', '-')
+    new_headers['Authorization'] = access_token
     new_headers['X-Adsws-Uid'] = headers.get('X-Adsws-Uid', str(current_app.config['BOOTSTRAP_USER_ID'])) # User ID
 
     return (payload, new_headers)
