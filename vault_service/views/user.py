@@ -629,6 +629,7 @@ def _create_myads_query(template_type, frequency, data, classes=None, start_isod
     out = []
     beg_pubyear = (get_date() - datetime.timedelta(days=180)).year
     end_date = get_date().date()
+    weekly_time_range = current_app.config.get('MYADS_WEEKLY_TIME_RANGE', 6)
     if start_isodate:
         start_isodate = parser.parse(start_isodate).date()
     if template_type in ('arxiv', None):
@@ -640,8 +641,7 @@ def _create_myads_query(template_type, frequency, data, classes=None, start_isod
             else:
                 start_date = get_date().date()
         elif frequency == 'weekly':
-            time_range = current_app.config.get('MYADS_WEEKLY_TIME_RANGE', 25)
-            start_date = (get_date() - datetime.timedelta(days=time_range)).date()
+            start_date = (get_date() - datetime.timedelta(days=weekly_time_range)).date()
 
         # if the provided last sent date is prior to normal start date, use the earlier date
         if start_isodate and (start_isodate < start_date):
@@ -681,7 +681,7 @@ def _create_myads_query(template_type, frequency, data, classes=None, start_isod
         out.append({'q': q, 'sort': sort})
     elif template_type == 'authors':
         keywords = data
-        start_date = (get_date() - datetime.timedelta(days=25)).date()
+        start_date = (get_date() - datetime.timedelta(days=weekly_time_range)).date()
         if start_isodate and (start_isodate < start_date):
             start_date = start_isodate
         q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
@@ -690,7 +690,7 @@ def _create_myads_query(template_type, frequency, data, classes=None, start_isod
         out.append({'q': q, 'sort': sort})
     elif template_type == 'keyword':
         keywords = data
-        start_date = (get_date() - datetime.timedelta(days=25)).date()
+        start_date = (get_date() - datetime.timedelta(days=weekly_time_range)).date()
         if start_isodate and (start_isodate < start_date):
             start_date = start_isodate
         # most recent

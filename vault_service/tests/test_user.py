@@ -345,8 +345,6 @@ class TestServices(TestCaseDatabase):
         r = self.client.get(url_for('user.get_myads', user_id='4'),
                             headers={'Authorization': 'secret'})
 
-        start_date = (adsmutils.get_date() - datetime.timedelta(days=25)).date()
-
         self.assertStatus(r, 200)
         self.assertEquals(r.json[0]['id'], query_id)
         self.assertEquals(r.json[0]['name'], 'keyword1, etc.')
@@ -436,7 +434,7 @@ class TestServices(TestCaseDatabase):
         self.assertTrue('entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_date, end_date) in r.json[0]['query'][0]['q'])
 
         # this should use the passed date, since it's before the default start date
-        start_iso = (adsmutils.get_date() - datetime.timedelta(days=25)).isoformat()
+        start_iso = (adsmutils.get_date() - datetime.timedelta(days=15)).isoformat()
         r = self.client.get(url_for('user.get_myads', user_id='4', start_isodate=start_iso),
                             headers={'Authorization': 'secret'})
 
@@ -636,11 +634,11 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['frequency'], 'weekly')
         self.assertEquals(r.json[0]['type'], 'template')
 
-        # check start dates in constructed query - no start date should default to now - 25 days
+        # check start dates in constructed query - no start date should default to now - the weekly time range
         r = self.client.get(url_for('user.get_myads', user_id=4),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
-        start_date = (adsmutils.get_date() - datetime.timedelta(days=25)).date()
+        start_date = (adsmutils.get_date() - datetime.timedelta(days=self.app.config.get('MYADS_WEEKLY_TIME_RANGE'))).date()
         self.assertTrue('author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_date, end_date)
                         in r.json[5]['query'][0]['q'])
 
@@ -694,7 +692,7 @@ class TestServices(TestCaseDatabase):
         r = self.client.get(url_for('user.execute_myads_query', myads_id=query_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
 
-        start_date = (adsmutils.get_date() - datetime.timedelta(days=25)).date()
+        start_date = (adsmutils.get_date() - datetime.timedelta(days=self.app.config.get('MYADS_WEEKLY_TIME_RANGE'))).date()
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json, [{'q': 'author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"] '
