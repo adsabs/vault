@@ -615,7 +615,7 @@ def _get_general_query_data(session, query_id):
             data = urlparse.parse_qs(query)
     return data
 
-def _create_myads_query(template_type, frequency, data, classes=None):
+def _create_myads_query(template_type, frequency, data, classes=None, start_isodate=None):
     """
     Creates a query based on the stored myADS setup (for templated queries only)
     :param frequency: daily or weekly
@@ -629,6 +629,9 @@ def _create_myads_query(template_type, frequency, data, classes=None):
     out = []
     beg_pubyear = (get_date() - datetime.timedelta(days=180)).year
     end_date = get_date().date()
+    weekly_time_range = current_app.config.get('MYADS_WEEKLY_TIME_RANGE', 6)
+    if start_isodate:
+        start_isodate = parser.parse(start_isodate).date()
     if template_type in ('arxiv', None):
         if frequency == 'daily':
             # on Mondays, deal with the weekend properly
@@ -638,8 +641,11 @@ def _create_myads_query(template_type, frequency, data, classes=None):
             else:
                 start_date = get_date().date()
         elif frequency == 'weekly':
-            time_range = current_app.config.get('MYADS_WEEKLY_TIME_RANGE', 25)
-            start_date = (get_date() - datetime.timedelta(days=time_range)).date()
+            start_date = (get_date() - datetime.timedelta(days=weekly_time_range)).date()
+
+        # if the provided last sent date is prior to normal start date, use the earlier date
+        if start_isodate and (start_isodate < start_date):
+            start_date = start_isodate
 
     if template_type == 'arxiv':
         if not classes:
@@ -675,14 +681,18 @@ def _create_myads_query(template_type, frequency, data, classes=None):
         out.append({'q': q, 'sort': sort})
     elif template_type == 'authors':
         keywords = data
-        start_date = (get_date() - datetime.timedelta(days=25)).date()
+        start_date = (get_date() - datetime.timedelta(days=weekly_time_range)).date()
+        if start_isodate and (start_isodate < start_date):
+            start_date = start_isodate
         q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
             format(keywords, start_date, end_date, beg_pubyear)
         sort = 'score desc, bibcode desc'
         out.append({'q': q, 'sort': sort})
     elif template_type == 'keyword':
         keywords = data
-        start_date = (get_date() - datetime.timedelta(days=25)).date()
+        start_date = (get_date() - datetime.timedelta(days=weekly_time_range)).date()
+        if start_isodate and (start_isodate < start_date):
+            start_date = start_isodate
         # most recent
         q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
             format(keywords, start_date, end_date, beg_pubyear)
@@ -714,7 +724,8 @@ def _create_myads_query(template_type, frequency, data, classes=None):
 
 @advertise(scopes=['ads-consumer:myads'], rate_limit = [1000, 3600*24])
 @bp.route('/get-myads/<user_id>', methods=['GET'])
-def get_myads(user_id):
+@bp.route('/get-myads/<user_id>/<start_isodate>', methods=['GET'])
+def get_myads(user_id, start_isodate=None):
     '''
     Fetches a myADS profile for the pipeline for a given uid
     '''
@@ -757,11 +768,11 @@ def get_myads(user_id):
                     query = None
                 else:
                     data = _get_general_query_data(session, s.query_id)
-                    query = _create_myads_query(s.template, s.frequency, data, classes=s.classes)
+                    query = _create_myads_query(s.template, s.frequency, data, classes=s.classes, start_isodate=start_isodate)
             else:
                 qid = None
                 data = s.data.encode('utf-8') if s.data else s.data
-                query = _create_myads_query(s.template, s.frequency, data, classes=s.classes)
+                query = _create_myads_query(s.template, s.frequency, data, classes=s.classes, start_isodate=start_isodate)
 
             o['qid'] = qid
             o['query'] = query

@@ -7,6 +7,7 @@ import httpretty
 import cgi
 from StringIO import StringIO
 import datetime
+from dateutil import parser
 
 project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_home not in sys.path:
@@ -344,8 +345,6 @@ class TestServices(TestCaseDatabase):
         r = self.client.get(url_for('user.get_myads', user_id='4'),
                             headers={'Authorization': 'secret'})
 
-        start_date = (adsmutils.get_date() - datetime.timedelta(days=25)).date()
-
         self.assertStatus(r, 200)
         self.assertEquals(r.json[0]['id'], query_id)
         self.assertEquals(r.json[0]['name'], 'keyword1, etc.')
@@ -412,6 +411,8 @@ class TestServices(TestCaseDatabase):
         else:
             start_date = adsmutils.get_date().date()
 
+        end_date = adsmutils.get_date().date()
+
         self.assertStatus(r, 200)
         self.assertEquals(r.json[0]['id'], query_id)
         self.assertEquals(r.json[0]['name'], 'keyword1, etc. - Recent Papers')
@@ -422,6 +423,24 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['template'], 'arxiv')
         self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2')
         self.assertEquals(r.json[0]['classes'], [u'astro-ph'])
+        self.assertTrue('entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_date, end_date) in r.json[0]['query'][0]['q'])
+
+        # check the stored query via the pipeline export using the start date option
+        # this should use the original start date, since the passed date is later
+        start_iso = (adsmutils.get_date() + datetime.timedelta(days=5)).isoformat()
+        r = self.client.get(url_for('user.get_myads', user_id='4', start_isodate=start_iso),
+                            headers={'Authorization': 'secret'})
+
+        self.assertTrue('entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_date, end_date) in r.json[0]['query'][0]['q'])
+
+        # this should use the passed date, since it's before the default start date
+        start_iso = (adsmutils.get_date() - datetime.timedelta(days=15)).isoformat()
+        r = self.client.get(url_for('user.get_myads', user_id='4', start_isodate=start_iso),
+                            headers={'Authorization': 'secret'})
+
+        start_iso_date = parser.parse(start_iso).date()
+        self.assertTrue(
+            'entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_iso_date, end_date) in r.json[0]['query'][0]['q'])
 
         # edit the stored query
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
@@ -582,6 +601,17 @@ class TestServices(TestCaseDatabase):
         self.assertEquals(r.json[0]['frequency'], 'weekly')
         self.assertEquals(r.json[0]['type'], 'template')
 
+        r = self.client.get(url_for('user.get_myads', user_id=4),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+
+        self.assertTrue(r.json[4]['query'][0]['q'] == 'citations(author:"Kurtz, Michael")')
+
+        # a passed start date shouldn't matter to citations queries
+        r2 = self.client.get(url_for('user.get_myads', user_id=4, start_isodate=start_iso_date),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+
+        self.assertTrue(r2.json[4]['query'][0]['q'] == r.json[4]['query'][0]['q'])
+
         # test the author query construction
         r = self.client.post(url_for('user.myads_notifications'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
@@ -596,8 +626,6 @@ class TestServices(TestCaseDatabase):
         r = self.client.get(url_for('user.myads_notifications', myads_id=query_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
-        start_date = (adsmutils.get_date() - datetime.timedelta(days=25)).date()
-
         self.assertStatus(r, 200)
         self.assertEquals(r.json[0]['id'], query_id)
         self.assertEquals(r.json[0]['name'], 'Favorite Authors - Recent Papers')
@@ -605,6 +633,23 @@ class TestServices(TestCaseDatabase):
         self.assertTrue(r.json[0]['stateful'])
         self.assertEquals(r.json[0]['frequency'], 'weekly')
         self.assertEquals(r.json[0]['type'], 'template')
+
+        # check start dates in constructed query - no start date should default to now - the weekly time range
+        r = self.client.get(url_for('user.get_myads', user_id=4),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+
+        start_date = (adsmutils.get_date() - datetime.timedelta(days=self.app.config.get('MYADS_WEEKLY_TIME_RANGE'))).date()
+        self.assertTrue('author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_date, end_date)
+                        in r.json[5]['query'][0]['q'])
+
+        # passing an earlier start date should respect that date
+        start_iso = (adsmutils.get_date() - datetime.timedelta(days=40)).isoformat()
+        r = self.client.get(url_for('user.get_myads', user_id=4, start_isodate=start_iso),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+
+        start_iso_date = parser.parse(start_iso).date()
+        self.assertTrue('author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_iso_date, end_date)
+                        in r.json[5]['query'][0]['q'])
 
     @httpretty.activate
     def test_myads_execute_notification(self):
@@ -647,7 +692,7 @@ class TestServices(TestCaseDatabase):
         r = self.client.get(url_for('user.execute_myads_query', myads_id=query_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
 
-        start_date = (adsmutils.get_date() - datetime.timedelta(days=25)).date()
+        start_date = (adsmutils.get_date() - datetime.timedelta(days=self.app.config.get('MYADS_WEEKLY_TIME_RANGE'))).date()
 
         self.assertStatus(r, 200)
         self.assertEquals(r.json, [{'q': 'author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"] '
