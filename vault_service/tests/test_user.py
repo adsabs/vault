@@ -652,6 +652,56 @@ class TestServices(TestCaseDatabase):
                         in r.json[5]['query'][0]['q'])
 
     @httpretty.activate
+    def test_non_ascii_myads(self):
+
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('VAULT_SOLR_QUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+                            "responseHeader":{
+                            "status":0, "QTime":0,
+                            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+                            "response":{"numFound":10456930,"start":0,"docs":[
+                              { "bibcode":"2005JGRC..110.4002G" },
+                              { "bibcode":"2005JGRC..110.4003N" },
+                              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        r = self.client.post(url_for('user.query'),
+                             headers={'Authorization': 'secret'},
+                             data=json.dumps({'q': 'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'}),
+                             content_type='application/json')
+        with self.app.session_scope() as session:
+            q = session.query(Query).filter_by(qid=r.json['qid']).first()
+
+            self.assertStatus(r, 200)
+
+        self.assert_(r.json['qid'], 'qid is missing')
+        qid = r.json['qid']
+
+        # some test data is unicode, some utf-8 because we use utf-8 encoding by default in bumblebee
+        test_data = [{'type': 'template', 'template': 'keyword', 'data': u'author:"Galindo-Guil, Francisco Jos\xe9"'},
+                     {'type': 'template', 'template': 'authors', 'data': 'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'},
+                     {'type': 'template', 'template': 'citations', 'data': 'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'},
+                     {'type': 'template', 'template': 'arxiv', 'data': 'author:"Galindo-Guil, Francisco Jos\xc3\xa9"', 'classes': ['astro-ph']},
+                     {'type': 'query', 'name': 'Query 1', 'qid': qid, 'stateful': True, 'frequency': 'daily'}
+                     ]
+
+        for t in test_data:
+            q = self.client.post(url_for('user.myads_notifications'),
+                                 headers={'Authorization': 'secret', 'X-Adsws-Uid': '101'},
+                                 data=json.dumps(t),
+                                 content_type='application/json')
+
+            self.assertStatus(q, 200)
+
+            s = self.client.get(url_for('user.execute_myads_query', myads_id=q.json['id']),
+                                headers={'Authorization': 'secret', 'X-Adsws-Uid': '101'})
+
+            self.assertStatus(s, 200)
+            self.assertIn(unicode('Galindo-Guil, Francisco Jos\xc3\xa9', 'utf-8'), s.json[0]['q'])
+
+    @httpretty.activate
     def test_myads_execute_notification(self):
 
         httpretty.register_uri(
