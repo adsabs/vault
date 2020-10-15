@@ -608,11 +608,13 @@ def _get_general_query_data(session, query_id):
     data = {}
     q = session.query(Query).filter_by(id=query_id).one()
     if q and q.query:
+        # note that json.loads returns unicode by default in Python 2
         query = json.loads(q.query).get('query')
         if query:
-            # Parse query string such as:
+            # Parse url encoded query string such as:
             # u'fq=%7B%21type%3Daqp+v%3D%24fq_database%7D&fq_database=%28database%3Aastronomy%29&q=star&sort=citation_count+desc%2C+bibcode+desc'
-            data = urlparse.parse_qs(query)
+            # must pass byte string to parse_q - urls only use ascii characters, so ascii encoding is fine
+            data = urlparse.parse_qs(query.encode('ascii'))
     return data
 
 def _create_myads_query(template_type, frequency, data, classes=None, start_isodate=None):
