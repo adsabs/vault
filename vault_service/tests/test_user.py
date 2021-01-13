@@ -1,11 +1,11 @@
 import sys, os
-from urllib import urlencode
+from urllib.parse import urlencode
 from flask import url_for, request
 import unittest
 import json
 import httpretty
 import cgi
-from StringIO import StringIO
+from io import StringIO
 import datetime
 from dateutil import parser
 

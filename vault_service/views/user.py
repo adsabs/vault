@@ -3,8 +3,8 @@ from flask import current_app
 from flask import request, url_for
 
 import json
-import md5
-import urlparse
+from hashlib import md5
+import urllib.parse as urlparse
 import datetime
 
 from sqlalchemy import exc

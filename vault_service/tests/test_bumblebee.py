@@ -1,5 +1,5 @@
 import sys, os
-from urllib import urlencode
+from urllib.parse import urlencode
 from flask import url_for, request
 import unittest
 import json

@@ -4,7 +4,7 @@ from ..models import Library
 from operator import itemgetter
 import json
 
-from flask.ext.discoverer import advertise
+from flask_discoverer import advertise
 
 bp = Blueprint('bumblebee', __name__)
 

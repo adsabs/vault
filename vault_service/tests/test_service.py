@@ -1,5 +1,5 @@
 import sys, os
-from urllib import urlencode
+from urllib.parse import urlencode
 
 project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_home not in sys.path:
@@ -10,7 +10,7 @@ import unittest
 import json
 import httpretty
 import cgi
-from StringIO import StringIO
+from io import StringIO
 from vault_service.tests.base import TestCaseDatabase
 
 class TestServices(TestCaseDatabase):
