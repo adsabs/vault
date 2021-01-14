@@ -1,10 +1,10 @@
 flask-cors==2.0.0
-Flask-Testing==0.8.0
+Flask-Testing==0.8.1
 httpretty==0.9.5
 coveralls==1.1
 pep257==0.5.0
-pytest==2.8.2
+pytest==6.2.1
 pytest-cache==1.0
-pytest-cov==2.2.0
+pytest-cov==2.10.1
 pytest-pep8==1.0.6
-testing.postgresql==1.2.1
+testing.postgresql==1.3.0

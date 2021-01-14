@@ -31,4 +31,4 @@ def configuration(key=None):
         else:
             return '{}', 404
     else:
-        return json.dumps(opts)
+        return json.dumps(opts), 200

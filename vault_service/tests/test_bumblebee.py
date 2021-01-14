@@ -34,12 +34,12 @@ class TestSite(TestCaseDatabase):
         r = self.client.get(url_for('bumblebee.configuration'),
                 content_type='application/json')
         self.assertStatus(r, 200)
-        self.assert_(r.json == {'foo': 'bar'}, 'missing json response')
+        self.assertTrue(r.json == {'foo': 'bar'}, 'missing json response')
 
         r = self.client.get(url_for('bumblebee.configuration') + '/foo',
                 content_type='application/json')
         self.assertStatus(r, 200)
-        self.assert_(r.json == 'bar', 'missing json response')
+        self.assertTrue(r.json == 'bar', 'missing json response')
 
         r = self.client.get(url_for('bumblebee.configuration') + '/foox',
                 content_type='application/json')

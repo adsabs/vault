@@ -21,23 +21,23 @@ class TestServices(TestCaseDatabase):
         '''Tests the ability to return queries as images'''
 
         # create a query
-        q = Query(qid='ABCD', query=json.dumps({'query': 'q=foo', 'bigquery': ''}), numfound=789543)
+        q = Query(qid='ABCD', query=json.dumps({'query': 'q=foo', 'bigquery': ''}).encode('utf8'), numfound=789543)
         self.app.db.session.add(q)
         self.app.db.session.commit()
 
         r = self.client.get(url_for('queryalls.query2svg', queryid='ABCD'),
                 headers={'Authorization': 'secret'})
 
-        self.assert_('789543' in r.data, 'Image was not generated properly');
-        self.assert_('<svg xmlns="http://www.w3.org/2000/svg" width="99" height="20">' in r.data, 'Image was not generated properly');
+        self.assertTrue(b'789543' in r.data, 'Image was not generated properly');
+        self.assertTrue(b'<svg xmlns="http://www.w3.org/2000/svg" width="99" height="20">' in r.data, 'Image was not generated properly');
         self.assertStatus(r, 200)
-        self.assert_(r.headers.get('Content-Type') == 'image/svg+xml')
+        self.assertTrue(r.headers.get('Content-Type') == 'image/svg+xml')
 
 
         r = self.client.get(url_for('queryalls.query2svg', queryid='foo'),
                 headers={'Authorization': 'secret'})
         self.assertStatus(r, 404)
-        self.assert_(r.headers.get('Content-Type') == 'image/svg+xml')
+        self.assertTrue(r.headers.get('Content-Type') == 'image/svg+xml')
 
 if __name__ == '__main__':
     unittest.main()

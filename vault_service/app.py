@@ -2,7 +2,7 @@ import logging.config
 
 from werkzeug.serving import run_simple
 import os, sys, inspect
-from flask import Blueprint
+from flask import Blueprint, Response
 from flask_discoverer import Discoverer
 from adsmutils import ADSFlask
 
@@ -51,7 +51,22 @@ def create_app(**config):
             app.register_blueprint(blueprint[1])
 
     discoverer = Discoverer(app)
-
+    
+    class JsonResponse(Response):
+        default_mimetype = 'application/json'
+    
+    app.response_class = JsonResponse
+    
+    """
+    @app.after_request
+    def after_request_func(response):
+        # by default (almost all our) responses are
+        # mimetype application/json
+        if 'Content-Type' not in response.headers:
+            response.headers['Content-Type'] = 'application/json'
+        return response
+    """
+    
     return app
 
 
