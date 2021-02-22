@@ -4,7 +4,7 @@ from ..models import Library
 from operator import itemgetter
 import json
 
-from flask.ext.discoverer import advertise
+from flask_discoverer import advertise
 
 bp = Blueprint('bumblebee', __name__)
 
@@ -31,4 +31,4 @@ def configuration(key=None):
         else:
             return '{}', 404
     else:
-        return json.dumps(opts)
+        return json.dumps(opts), 200

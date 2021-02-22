@@ -1,11 +1,11 @@
 import sys, os
-from urllib import urlencode
+from urllib.parse import urlencode
 from flask import url_for, request
 import unittest
 import json
 import httpretty
 import cgi
-from StringIO import StringIO
+from io import StringIO
 
 project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_home not in sys.path:
@@ -22,10 +22,10 @@ class TestServices(TestCaseDatabase):
 
     def test_query_utils(self):
         r = utils.cleanup_payload({'query': 'q=foo&fq=boo&foo=bar&boo=bar'})
-        self.assert_(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
+        self.assertTrue(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
 
         r = utils.cleanup_payload({'query': {'q': 'foo', 'fq': 'boo', 'foo': 'bar', 'boo': 'bar'}})
-        self.assert_(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
+        self.assertTrue(r == {'query': 'fq=boo&q=foo', 'bigquery': ""}, 'wrong output')
 
         def test_exc():
             utils.cleanup_payload({'query': {'q': 'foo', 'fq': 'boo', 'foo': 'bar', 'boo': 'bar'},
@@ -35,12 +35,12 @@ class TestServices(TestCaseDatabase):
 
         r = utils.cleanup_payload({'query': {'q': 'foo', 'fq': '{!bitset}', 'foo': 'bar', 'boo': 'bar'},
                                    'bigquery': 'foo\nbar'})
-        self.assert_(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
+        self.assertTrue(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
 
         # Typical general myADS notification
-        r = utils.cleanup_payload({'query': {u'fq': [u'{!type=aqp v=$fq_database}'], u'fq_database': [u'(database:astronomy)'], u'q': [u'star'], u'sort': [u'citation_count desc, bibcode desc']},
+        r = utils.cleanup_payload({'query': {'fq': ['{!type=aqp v=$fq_database}'], 'fq_database': ['(database:astronomy)'], 'q': ['star'], 'sort': ['citation_count desc, bibcode desc']},
                                    })
-        self.assert_(r == {'bigquery': '', 'query': 'fq=%7B%21type%3Daqp+v%3D%24fq_database%7D&fq_database=%28database%3Aastronomy%29&q=star&sort=citation_count+desc%2C+bibcode+desc'})
+        self.assertTrue(r == {'bigquery': '', 'query': 'fq=%7B%21type%3Daqp+v%3D%24fq_database%7D&fq_database=%28database%3Aastronomy%29&q=star&sort=citation_count+desc%2C+bibcode+desc'})
 
     @httpretty.activate
     def test_upsert_myads(self):
@@ -68,15 +68,15 @@ class TestServices(TestCaseDatabase):
 
         with self.app.session_scope() as session:
             q = session.query(MyADS).filter_by(user_id=user_id).all()
-            self.assertEquals(len(q), 4)
+            self.assertEqual(len(q), 4)
             # make sure the blank author is removed
-            self.assertEquals(q[1].data, 'author:"Lockwood, G." OR author:"Accomazzi, A." OR author:"Kurtz, M."')
+            self.assertEqual(q[1].data, 'author:"Lockwood, G." OR author:"Accomazzi, A." OR author:"Kurtz, M."')
 
-        self.assertEquals(len(existing_setups), 0)
-        self.assertEquals(len(new_setups), 4)
-        self.assertEquals(new_setups[2], {'id': 3,
+        self.assertEqual(len(existing_setups), 0)
+        self.assertEqual(len(new_setups), 4)
+        self.assertEqual(new_setups[2], {'id': 3,
                                           'template': 'keyword',
-                                          'name': u'photosphere, etc.',
+                                          'name': 'photosphere, etc.',
                                           'frequency': 'weekly'})
 
         user_id = 6
@@ -96,22 +96,22 @@ class TestServices(TestCaseDatabase):
 
         with self.app.session_scope() as session:
             q = session.query(MyADS).filter_by(user_id=user_id).all()
-            self.assertEquals(len(q), 3)
+            self.assertEqual(len(q), 3)
             self.assertTrue(q[0].active)
             self.assertFalse(q[1].active)
             self.assertTrue(q[2].active)
 
-        self.assertEquals(len(existing_setups), 0)
-        self.assertEquals(len(new_setups), 3)
-        self.assertEquals(new_setups[2], {'id': 7,
+        self.assertEqual(len(existing_setups), 0)
+        self.assertEqual(len(new_setups), 3)
+        self.assertEqual(new_setups[2], {'id': 7,
                                           'template': 'keyword',
-                                          'name': u'accretion, etc.',
+                                          'name': 'accretion, etc.',
                                           'frequency': 'weekly'})
 
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
 
-        self.assertEquals(len(existing_setups), 3)
-        self.assertEquals(len(new_setups), 0)
+        self.assertEqual(len(existing_setups), 3)
+        self.assertEqual(len(new_setups), 0)
 
         # test duplicate handling - manually adding a duplicate query shouldn't break the import
         httpretty.register_uri(
@@ -138,8 +138,8 @@ class TestServices(TestCaseDatabase):
 
         existing_setups, new_setups = utils.upsert_myads(classic_setups=classic_setup, user_id=user_id)
 
-        self.assertEquals(len(existing_setups), 4)
-        self.assertEquals(len(new_setups), 0)
+        self.assertEqual(len(existing_setups), 4)
+        self.assertEqual(len(new_setups), 0)
 
     def test_keyword_query_name(self):
         for (test, expected) in [('one', 'one'),
@@ -157,14 +157,16 @@ class TestServices(TestCaseDatabase):
 
             name = utils.get_keyword_query_name(test)
 
-            self.assertEquals(name, expected)
+            self.assertEqual(name, expected)
 
         name = utils.get_keyword_query_name('one', database='physics')
-        self.assertEquals(name, 'one (physics collection)')
+        self.assertEqual(name, 'one (physics collection)')
 
         name = utils.get_keyword_query_name('two', database='astronomy')
-        self.assertEquals(name, 'two (astronomy collection)')
+        self.assertEqual(name, 'two (astronomy collection)')
 
         name = utils.get_keyword_query_name('three', database='arxiv')
-        self.assertEquals(name, 'three (arXiv e-prints collection)')
+        self.assertEqual(name, 'three (arXiv e-prints collection)')
 
+if __name__ == '__main__':
+    unittest.main()

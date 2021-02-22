@@ -1,11 +1,11 @@
 import sys, os
-from urllib import urlencode
+from urllib.parse import urlencode
 from flask import url_for, request
 import unittest
 import json
 import httpretty
 import cgi
-from StringIO import StringIO
+from io import StringIO
 import datetime
 from dateutil import parser
 
@@ -46,12 +46,12 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
 
 
-        self.assert_(r.json['qid'], 'qid is missing')
+        self.assertTrue(r.json['qid'], 'qid is missing')
         with self.app.session_scope() as session:
             q = session.query(Query).filter_by(qid=r.json['qid']).first()
 
-            self.assert_(q.qid == r.json['qid'], 'query was not saved')
-            self.assert_(q.query == json.dumps({"query": "q=foo%3Abar", "bigquery": ""}, 'query was not saved'))
+            self.assertTrue(q.qid == r.json['qid'], 'query was not saved')
+            self.assertTrue(q.query == json.dumps({"query": "q=foo%3Abar", "bigquery": ""}).encode('utf8'), 'query was not saved')
             session.expunge_all()
 
 
@@ -95,13 +95,13 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
 
 
-        self.assert_(r.json['qid'], 'qid is missing')
+        self.assertTrue(r.json['qid'], 'qid is missing')
         with self.app.session_scope() as session:
             q = session.query(Query).filter_by(qid=r.json['qid']).first()
             #q = self.app.db.session.query(Query).filter_by(qid=r.json['qid']).first()
 
-            self.assert_(q.qid == r.json['qid'], 'query was not saved')
-            self.assert_(q.query == json.dumps({"query": "fq=%7B%21bitset%7D&q=foo%3Abar", "bigquery": "one\ntwo"}, 'query was not saved'))
+            self.assertTrue(q.qid == r.json['qid'], 'query was not saved')
+            self.assertTrue(q.query == json.dumps({"query": "fq=%7B%21bitset%7D&q=foo%3Abar", "bigquery": "one\ntwo"}).encode('utf8'), 'query was not saved')
             session.expunge_all()
 
 
@@ -142,7 +142,7 @@ class TestServices(TestCaseDatabase):
                 content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json == {}, 'missing empty json response')
+        self.assertTrue(r.json == {}, 'missing empty json response')
 
         # try to save something broken (it has to be json)
         r = self.client.post(url_for('user.store_data'),
@@ -151,7 +151,7 @@ class TestServices(TestCaseDatabase):
                 content_type='application/json')
 
         self.assertStatus(r, 400)
-        self.assert_(r.json['msg'], 'missing explanation')
+        self.assertTrue(r.json['msg'], 'missing explanation')
 
         # save something
         r = self.client.post(url_for('user.store_data'),
@@ -160,7 +160,7 @@ class TestServices(TestCaseDatabase):
                 content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json['foo'] == 'bar', 'missing echo')
+        self.assertTrue(r.json['foo'] == 'bar', 'missing echo')
 
         # get it back
         r = self.client.get(url_for('user.store_data'),
@@ -168,7 +168,7 @@ class TestServices(TestCaseDatabase):
                 content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json == {'foo': 'bar'}, 'missing data ({})'.format(json.dumps(r.json)))
+        self.assertTrue(r.json == {'foo': 'bar'}, 'missing data ({})'.format(json.dumps(r.json)))
 
         # save something else
         r = self.client.post(url_for('user.store_data'),
@@ -177,7 +177,7 @@ class TestServices(TestCaseDatabase):
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json['db'] == 'testdb', 'missing echo')
+        self.assertTrue(r.json['db'] == 'testdb', 'missing echo')
 
         # get it back
         r = self.client.get(url_for('user.store_data'),
@@ -185,7 +185,7 @@ class TestServices(TestCaseDatabase):
                             content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb'}, 'missing data ({})'.format(json.dumps(r.json)))
+        self.assertTrue(r.json == {'foo': 'bar', 'db': 'testdb'}, 'missing data ({})'.format(json.dumps(r.json)))
 
         # modify it
         r = self.client.post(url_for('user.store_data'),
@@ -194,7 +194,7 @@ class TestServices(TestCaseDatabase):
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json['db'] == 'testdb2', 'missing echo')
+        self.assertTrue(r.json['db'] == 'testdb2', 'missing echo')
 
         # get everything back
         r = self.client.get(url_for('user.store_data'),
@@ -202,7 +202,7 @@ class TestServices(TestCaseDatabase):
                             content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json == {'foo': 'bar', 'db': 'testdb2'}, 'missing data ({})'.format(json.dumps(r.json)))
+        self.assertTrue(r.json == {'foo': 'bar', 'db': 'testdb2'}, 'missing data ({})'.format(json.dumps(r.json)))
 
     def test_myads_retrieval(self):
         '''Tests pipeline retrieval of myADS setup and users'''
@@ -236,7 +236,7 @@ class TestServices(TestCaseDatabase):
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assert_(r.json['name'] == 'Query 1')
+        self.assertTrue(r.json['name'] == 'Query 1')
         self.assertTrue(r.json['active'])
         myads_id = r.json['id']
 
@@ -255,35 +255,35 @@ class TestServices(TestCaseDatabase):
                             content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json['name'], 'Query 1 - edited')
+        self.assertEqual(r.json['name'], 'Query 1 - edited')
 
         # get all myADS setups via the pipeline endpoint
         r = self.client.get(url_for('user.get_myads', user_id='3'),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['name'], 'Query 1 - edited')
-        self.assertEquals(r.json[0]['qid'], qid)
+        self.assertEqual(r.json[0]['name'], 'Query 1 - edited')
+        self.assertEqual(r.json[0]['qid'], qid)
         self.assertTrue(r.json[0]['active'])
         self.assertTrue(r.json[0]['stateful'])
-        self.assertEquals(r.json[0]['frequency'], 'daily')
-        self.assertEquals(r.json[0]['type'], 'query')
+        self.assertEqual(r.json[0]['frequency'], 'daily')
+        self.assertEqual(r.json[0]['type'], 'query')
 
         # get all myADS setups via the BBB endpoint
         r = self.client.get(url_for('user.myads_notifications'),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['name'], 'Query 1 - edited')
+        self.assertEqual(r.json[0]['name'], 'Query 1 - edited')
         self.assertTrue(r.json[0]['active'])
-        self.assertEquals(r.json[0]['frequency'], 'daily')
-        self.assertEquals(r.json[0]['type'], 'query')
+        self.assertEqual(r.json[0]['frequency'], 'daily')
+        self.assertEqual(r.json[0]['type'], 'query')
 
         # fetch the active myADS users
         r = self.client.get(url_for('user.export', iso_datestring=now))
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, {'users': [3]})
+        self.assertEqual(r.json, {'users': [3]})
 
     @httpretty.activate
     def test_template_query(self):
@@ -346,14 +346,14 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'keyword1, etc.')
+        self.assertEqual(r.json[0]['id'], query_id)
+        self.assertEqual(r.json[0]['name'], 'keyword1, etc.')
         self.assertTrue(r.json[0]['active'])
         self.assertFalse(r.json[0]['stateful'])
-        self.assertEquals(r.json[0]['frequency'], 'weekly')
-        self.assertEquals(r.json[0]['type'], 'template')
-        self.assertEquals(r.json[0]['template'], 'keyword')
-        self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2')
+        self.assertEqual(r.json[0]['frequency'], 'weekly')
+        self.assertEqual(r.json[0]['type'], 'template')
+        self.assertEqual(r.json[0]['template'], 'keyword')
+        self.assertEqual(r.json[0]['data'], 'keyword1 OR keyword2')
 
         # try to retrieve a query without a user ID in the headers
         r = self.client.get(url_for('user.myads_notifications', myads_id=query_id),
@@ -366,12 +366,12 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'keyword1, etc.')
+        self.assertEqual(r.json[0]['id'], query_id)
+        self.assertEqual(r.json[0]['name'], 'keyword1, etc.')
         self.assertTrue(r.json[0]['active'])
         self.assertFalse(r.json[0]['stateful'])
-        self.assertEquals(r.json[0]['frequency'], 'weekly')
-        self.assertEquals(r.json[0]['type'], 'template')
+        self.assertEqual(r.json[0]['frequency'], 'weekly')
+        self.assertEqual(r.json[0]['type'], 'template')
 
         # successfully delete the query setup
         r = self.client.delete(url_for('user.myads_notifications', myads_id=query_id),
@@ -414,15 +414,15 @@ class TestServices(TestCaseDatabase):
         end_date = adsmutils.get_date().date()
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'keyword1, etc. - Recent Papers')
+        self.assertEqual(r.json[0]['id'], query_id)
+        self.assertEqual(r.json[0]['name'], 'keyword1, etc. - Recent Papers')
         self.assertFalse(r.json[0]['stateful'])
-        self.assertEquals(r.json[0]['type'], 'template')
+        self.assertEqual(r.json[0]['type'], 'template')
         self.assertTrue(r.json[0]['active'])
-        self.assertEquals(r.json[0]['frequency'], 'daily')
-        self.assertEquals(r.json[0]['template'], 'arxiv')
-        self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2')
-        self.assertEquals(r.json[0]['classes'], [u'astro-ph'])
+        self.assertEqual(r.json[0]['frequency'], 'daily')
+        self.assertEqual(r.json[0]['template'], 'arxiv')
+        self.assertEqual(r.json[0]['data'], 'keyword1 OR keyword2')
+        self.assertEqual(r.json[0]['classes'], ['astro-ph'])
         self.assertTrue('entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_date, end_date) in r.json[0]['query'][0]['q'])
 
         # check the stored query via the pipeline export using the start date option
@@ -465,7 +465,7 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         # name was provided, but it was constructed, so the name should be updated
-        self.assertEquals(r.json['name'], 'keyword2, etc. - Recent Papers')
+        self.assertEqual(r.json['name'], 'keyword2, etc. - Recent Papers')
 
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
@@ -478,7 +478,7 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         # a non-constructed name was provided - use that
-        self.assertEquals(r.json['name'], 'test query')
+        self.assertEqual(r.json['name'], 'test query')
 
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
@@ -490,22 +490,22 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         # no name is provided, so keep the old provided name
-        self.assertEquals(r.json['name'], 'test query')
+        self.assertEqual(r.json['name'], 'test query')
 
         # check the exported setup
         r = self.client.get(url_for('user.get_myads', user_id='4'),
                             headers={'Authorization': 'secret'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'test query')
+        self.assertEqual(r.json[0]['id'], query_id)
+        self.assertEqual(r.json[0]['name'], 'test query')
         self.assertFalse(r.json[0]['stateful'])
-        self.assertEquals(r.json[0]['type'], 'template')
+        self.assertEqual(r.json[0]['type'], 'template')
         self.assertTrue(r.json[0]['active'])
-        self.assertEquals(r.json[0]['frequency'], 'daily')
-        self.assertEquals(r.json[0]['template'], 'arxiv')
-        self.assertEquals(r.json[0]['data'], 'keyword1 OR keyword2 OR keyword3')
-        self.assertEquals(r.json[0]['classes'], ['astro-ph'])
+        self.assertEqual(r.json[0]['frequency'], 'daily')
+        self.assertEqual(r.json[0]['template'], 'arxiv')
+        self.assertEqual(r.json[0]['data'], 'keyword1 OR keyword2 OR keyword3')
+        self.assertEqual(r.json[0]['classes'], ['astro-ph'])
 
         # add a second query
         r = self.client.post(url_for('user.myads_notifications'),
@@ -516,15 +516,15 @@ class TestServices(TestCaseDatabase):
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json['name'], 'Favorite Authors - Recent Papers')
+        self.assertEqual(r.json['name'], 'Favorite Authors - Recent Papers')
 
         # get all queries back
         r = self.client.get(url_for('user.myads_notifications'),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['name'], 'test query')
-        self.assertEquals(r.json[1]['name'], 'Favorite Authors - Recent Papers')
+        self.assertEqual(r.json[0]['name'], 'test query')
+        self.assertEqual(r.json[1]['name'], 'Favorite Authors - Recent Papers')
 
         # save an arXiv query without keywords
         r = self.client.post(url_for('user.myads_notifications'),
@@ -535,7 +535,7 @@ class TestServices(TestCaseDatabase):
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json['data'], None)
+        self.assertEqual(r.json['data'], None)
 
         r = self.client.post(url_for('user.myads_notifications'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
@@ -546,7 +546,7 @@ class TestServices(TestCaseDatabase):
                              content_type='application/json')
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json['data'], None)
+        self.assertEqual(r.json['data'], None)
 
         # test a blank arXiv query
         r = self.client.post(url_for('user.myads_notifications'),
@@ -594,12 +594,12 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'author:"Kurtz, Michael" - Citations')
+        self.assertEqual(r.json[0]['id'], query_id)
+        self.assertEqual(r.json[0]['name'], 'author:"Kurtz, Michael" - Citations')
         self.assertTrue(r.json[0]['active'])
         self.assertTrue(r.json[0]['stateful'])
-        self.assertEquals(r.json[0]['frequency'], 'weekly')
-        self.assertEquals(r.json[0]['type'], 'template')
+        self.assertEqual(r.json[0]['frequency'], 'weekly')
+        self.assertEqual(r.json[0]['type'], 'template')
 
         r = self.client.get(url_for('user.get_myads', user_id=4),
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
@@ -627,12 +627,12 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json[0]['id'], query_id)
-        self.assertEquals(r.json[0]['name'], 'Favorite Authors - Recent Papers')
+        self.assertEqual(r.json[0]['id'], query_id)
+        self.assertEqual(r.json[0]['name'], 'Favorite Authors - Recent Papers')
         self.assertTrue(r.json[0]['active'])
         self.assertTrue(r.json[0]['stateful'])
-        self.assertEquals(r.json[0]['frequency'], 'weekly')
-        self.assertEquals(r.json[0]['type'], 'template')
+        self.assertEqual(r.json[0]['frequency'], 'weekly')
+        self.assertEqual(r.json[0]['type'], 'template')
 
         # check start dates in constructed query - no start date should default to now - the weekly time range
         r = self.client.get(url_for('user.get_myads', user_id=4),
@@ -669,21 +669,21 @@ class TestServices(TestCaseDatabase):
 
         r = self.client.post(url_for('user.query'),
                              headers={'Authorization': 'secret'},
-                             data=json.dumps({'q': 'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'}),
+                             data=json.dumps({'q': b'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'.decode('utf8')}),
                              content_type='application/json')
         with self.app.session_scope() as session:
             q = session.query(Query).filter_by(qid=r.json['qid']).first()
 
             self.assertStatus(r, 200)
 
-        self.assert_(r.json['qid'], 'qid is missing')
+        self.assertTrue(r.json['qid'], 'qid is missing')
         qid = r.json['qid']
 
         # some test data is unicode, some utf-8 because we use utf-8 encoding by default in bumblebee
-        test_data = [{'type': 'template', 'template': 'keyword', 'data': u'author:"Galindo-Guil, Francisco Jos\xe9"'},
-                     {'type': 'template', 'template': 'authors', 'data': 'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'},
-                     {'type': 'template', 'template': 'citations', 'data': 'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'},
-                     {'type': 'template', 'template': 'arxiv', 'data': 'author:"Galindo-Guil, Francisco Jos\xc3\xa9"', 'classes': ['astro-ph']},
+        test_data = [{'type': 'template', 'template': 'keyword', 'data': 'author:"Galindo-Guil, Francisco Jos\xe9"'},
+                     {'type': 'template', 'template': 'authors', 'data': b'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'.decode('utf8')},
+                     {'type': 'template', 'template': 'citations', 'data': b'author:"Galindo-Guil, Francisco Jos\xc3\xa9"'.decode('utf8')},
+                     {'type': 'template', 'template': 'arxiv', 'data': 'author:"Galindo-Guil, Francisco José"', 'classes': ['astro-ph']},
                      {'type': 'query', 'name': 'Query 1', 'qid': qid, 'stateful': True, 'frequency': 'daily'}
                      ]
 
@@ -699,7 +699,7 @@ class TestServices(TestCaseDatabase):
                                 headers={'Authorization': 'secret', 'X-Adsws-Uid': '101'})
 
             self.assertStatus(s, 200)
-            self.assertIn(unicode('Galindo-Guil, Francisco Jos\xc3\xa9', 'utf-8'), s.json[0]['q'])
+            self.assertIn(b'Galindo-Guil, Francisco Jos\xc3\xa9'.decode('utf8'), s.json[0]['q'])
 
     @httpretty.activate
     def test_myads_execute_notification(self):
@@ -745,7 +745,7 @@ class TestServices(TestCaseDatabase):
         start_date = (adsmutils.get_date() - datetime.timedelta(days=self.app.config.get('MYADS_WEEKLY_TIME_RANGE'))).date()
 
         self.assertStatus(r, 200)
-        self.assertEquals(r.json, [{'q': 'author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"] '
+        self.assertEqual(r.json, [{'q': 'author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"] '
                                             'pubdate:[{2}-00 TO *]'.format(start_date, now, beg_pubyear),
                                        'sort': 'score desc, bibcode desc'}])
 
@@ -772,8 +772,8 @@ class TestServices(TestCaseDatabase):
                             headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
 
         self.assertStatus(r, 200)
-        self.assertEquals(len(r.json['new']), 1)
-        self.assertEquals(len(r.json['existing']), 0)
+        self.assertEqual(len(r.json['new']), 1)
+        self.assertEqual(len(r.json['existing']), 0)
 
 if __name__ == '__main__':
     unittest.main()

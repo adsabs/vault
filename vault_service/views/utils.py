@@ -1,5 +1,5 @@
-import urlparse
-import urllib
+import urllib.parse as urlparse
+import urllib.request, urllib.parse, urllib.error
 import json
 import re
 
@@ -16,7 +16,7 @@ def make_solr_request(query, bigquery=None, headers=None):
     # I'm making a simplification here; sending just one content stream
     # it would be possible to save/send multiple content streams but
     # I decided that would only create confusion; so only one is allowed
-    if isinstance(query, basestring):
+    if isinstance(query, str):
         query = urlparse.parse_qs(query)
 
     if bigquery:
@@ -38,30 +38,26 @@ def cleanup_payload(payload):
 
     if (isinstance(pointer, list)):
         pointer = pointer[0]
-    if (isinstance(pointer, basestring)):
+    if (isinstance(pointer, str)):
         pointer = urlparse.parse_qs(pointer)
 
 
     # clean up
-    for k,v in pointer.items():
+    for k,v in list(pointer.items()):
         if k[0] == 'q':
-            # Convert to UTF-8, otherwise queries with accents will fail later on
-            if isinstance(v, basestring):
-                query[k] = v.encode('utf-8')
-            elif isinstance(v, (list, tuple)):
-                query[k] = [e.encode('utf-8') if isinstance(e, basestring) else e for e in v]
+            query[k] = v
         elif k[0:2] == 'fq' or k[0:4] == 'sort':
             query[k] = v
 
     # make sure the bigquery is just a string
     if isinstance(bigquery, list):
         bigquery = bigquery[0]
-    if not isinstance(bigquery, basestring):
+    if not isinstance(bigquery, str):
         raise Exception('The bigquery has to be a string, instead it was {0}'.format(type(bigquery)))
 
     if len(bigquery) > 0:
         found = False
-        for k,v in query.items():
+        for k,v in list(query.items()):
             if 'fq' in k:
                 if isinstance(v, list):
                     for x in v:
@@ -80,9 +76,9 @@ def cleanup_payload(payload):
 
 
 def serialize_dict(data):
-    v = data.items()
+    v = list(data.items())
     v = sorted(v, key=lambda x: x[0])
-    return urllib.urlencode(v, doseq=True)
+    return urllib.parse.urlencode(v, doseq=True)
 
 
 def check_request(request):
