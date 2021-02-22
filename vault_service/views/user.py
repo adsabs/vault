@@ -51,7 +51,9 @@ def query(queryid=None):
 
     payload = cleanup_payload(payload)
 
-    # check we don't have this query already
+
+    # check we don't have this query already. If the query exist do not reissue query but return 
+    # values previously stored in the database (infinite cache like behavior)
     query = json.dumps(payload).encode('utf8')
     # digest is made of a bytestream
     qid = md5((headers['X-Adsws-Uid'].encode('utf8') + query)).hexdigest()
@@ -60,13 +62,14 @@ def query(queryid=None):
         if q:
             return json.dumps({'qid': qid, 'numFound': q.numfound}), 200
 
-    # check the query is valid
+    # else, reissue new qid
+    # first, check the query is valid
     solrq = payload['query'] + '&wt=json'
     r = make_solr_request(query=solrq, bigquery=payload['bigquery'], headers=headers)
     if r.status_code != 200:
         return json.dumps({'msg': 'Could not verify the query.', 'query': payload, 'reason': r.text}), 404
 
-    # extract number of docs found
+    # extract number of docs found, save that number of documents from when the qid was created
     num_found = 0
     try:
         num_found = int(r.json()['response']['numFound'])
@@ -83,10 +86,6 @@ def query(queryid=None):
         except exc.IntegrityError as e:
             session.rollback()
             return json.dumps({'msg': e.message or e.description}), 400
-            # TODO: update
-            #q = session.merge(q) # force re-sync from database
-            #q.updated = datetime.datetime.utcnow()
-            #session.commit()
 
         return json.dumps({'qid': qid, 'numFound': num_found}), 200
 
@@ -94,7 +93,10 @@ def query(queryid=None):
 @advertise(scopes=['execute-query'], rate_limit = [1000, 3600*24])
 @bp.route('/execute_query/<queryid>', methods=['GET'])
 def execute_query(queryid):
-    '''Allows you to execute stored query'''
+    '''Allows you to execute stored query. With this endpoint you can return parameters for the 
+    previously asigned and stored query in the database (such as current number of documents in
+    the database.
+    '''
 
     with current_app.session_scope() as session:
         q = session.query(Query).filter_by(qid=queryid).first()
