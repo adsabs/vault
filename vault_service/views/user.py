@@ -37,14 +37,14 @@ def query(queryid=None):
                 return json.dumps({'msg': 'Query not found: ' + queryid}), 404
             return json.dumps({
                 'qid': q.qid,
-                'query': q.query,
+                'query': q.query.decode('utf8'), # bytes to string
                 'numfound': q.numfound }), 200
 
     # get the query data
     try:
         payload, headers = check_request(request)
     except Exception as e:
-        return json.dumps({'msg': e.message or e.description}), 400
+        return json.dumps({'msg': str(e)}), 400
 
     if len(list(payload.keys())) == 0:
         raise Exception('Query cannot be empty')
