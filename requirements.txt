@@ -3,3 +3,7 @@ git+https://github.com/adsabs/ADSParser.git@v1.0.4
 alembic==0.8.9
 psycopg2==2.8.6
 Flask-Script==2.0.5
+itsdangerous<=2.0.1
+werkzeug<=2.0.3
+markupsafe<=2.0.1
+jinja2==2.11.3
