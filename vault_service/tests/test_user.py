@@ -789,12 +789,12 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 204)
 
         # this shouldn't do anything since there are no setups
-        # r = self.client.put(url_for('user.myads_status', user_id=33),
-        #                     headers={'Authorization': 'secret'},
-        #                     data=json.dumps({'active': False}),
-        #                     content_type='application/json')
-        #
-        # self.assertStatus(r, 204)
+        r = self.client.put(url_for('user.myads_status', user_id=33),
+                            headers={'Authorization': 'secret'},
+                            data=json.dumps({'active': False}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 204)
 
         # save some queries
         r = self.client.post(url_for('user.myads_notifications'),
