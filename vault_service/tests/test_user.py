@@ -775,5 +775,99 @@ class TestServices(TestCaseDatabase):
         self.assertEqual(len(r.json['new']), 1)
         self.assertEqual(len(r.json['existing']), 0)
 
+    @httpretty.activate
+    def test_myads_status_update(self):
+        with self.app.session_scope() as session:
+            q = session.query(Query).first()
+
+            qid = q.qid
+
+        # make sure no setups exist
+        r = self.client.get(url_for('user.myads_notifications'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'})
+
+        self.assertStatus(r, 204)
+
+        # this shouldn't do anything since there are no setups
+        r = self.client.put(url_for('user.myads_status', user_id=33),
+                            headers={'Authorization': 'secret'},
+                            data=json.dumps({'active': False}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 204)
+
+        # save some queries
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'},
+                             data=json.dumps({'name': 'Query 1', 'qid': qid, 'stateful': True,
+                                              'frequency': 'daily', 'type': 'query'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json['active'])
+
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'},
+                             data=json.dumps({'name': 'Query 2', 'qid': qid, 'stateful': True,
+                                              'frequency': 'daily', 'type': 'query'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json['active'])
+
+        # send a bad request
+        r = self.client.put(url_for('user.myads_status', user_id=33),
+                            headers={'Authorization': 'secret'},
+                            data=json.dumps({'stateful': False}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 400)
+
+        # try to send extra keys
+        r = self.client.put(url_for('user.myads_status', user_id=33),
+                            headers={'Authorization': 'secret'},
+                            data=json.dumps({'frequency': 'weekly', 'active': True}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+
+        r = self.client.get(url_for('user.myads_notifications'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'})
+        self.assertStatus(r, 200)
+
+        for setup in r.json:
+            # status should be unchanged
+            self.assertTrue(setup['active'])
+            # frequency should also be unchanged
+            self.assertEqual(setup['frequency'], 'daily')
+
+        # disable all notifications
+        r = self.client.put(url_for('user.myads_status', user_id=33),
+                            headers={'Authorization': 'secret'},
+                            data=json.dumps({'active': False}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+
+        r = self.client.get(url_for('user.myads_notifications'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'})
+
+        for setup in r.json:
+            self.assertFalse(setup['active'])
+
+        # enable all notifications
+        r = self.client.put(url_for('user.myads_status', user_id=33),
+                            headers={'Authorization': 'secret'},
+                            data=json.dumps({'active': True}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+
+        r = self.client.get(url_for('user.myads_notifications'),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'})
+
+        for setup in r.json:
+            self.assertTrue(setup['active'])
+
 if __name__ == '__main__':
     unittest.main()

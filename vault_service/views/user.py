@@ -806,6 +806,44 @@ def export(iso_datestring):
     return json.dumps({'users': output}), 200
 
 
+@advertise(scopes=['ads-consumer:myads'], rate_limit = [1000, 3600*24])
+@bp.route('/myads-status-update/<user_id>', methods=['PUT'])
+def myads_status(user_id):
+    """
+    Enable/disable all myADS notifications for a given user
+
+    payload: {'active': True/False}
+
+    :param user_id: ID of user to update
+    :return:
+    """
+    try:
+        payload, headers = check_request(request)
+    except Exception as e:
+        return json.dumps({'msg': e.message or e.description}), 400
+
+
+    if 'active' in payload:
+        status = {'active': payload['active']}
+    else:
+        return 'Only status updates allowed', 400
+
+    with current_app.session_scope() as session:
+        all_setups = session.query(MyADS).filter_by(user_id=user_id).order_by(MyADS.id.asc()).all()
+        if len(all_setups) == 0:
+            return '{}', 204
+        ids = [s.id for s in all_setups]
+
+    for s in ids:
+        msg, status_code = _edit_myads_notification(status, headers, user_id, s)
+        if status_code != 200:
+            outmsg = 'Error %s while updating status for setup %s for user %s. Error message: %s',\
+                     status_code, s, user_id, msg
+            return json.dumps({'msg': outmsg}), 500
+
+    return '{}', 200
+
+
 @advertise(scopes=[], rate_limit=[1000, 3600*24])
 @bp.route('/myads-import', methods=['GET'])
 def import_myads():
