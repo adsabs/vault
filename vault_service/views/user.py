@@ -451,10 +451,6 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
     :param myads_id: ID of a single notification
     :return: json, details of edited setup
     """
-    # handles both None values and empty strings
-    if not payload.get('data'):
-        payload['old_data'] = payload.get('data', None)
-        payload['data'] = None
 
     # verify data/query
     if payload.get('data', None):
