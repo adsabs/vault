@@ -507,6 +507,29 @@ class TestServices(TestCaseDatabase):
         self.assertEqual(r.json[0]['data'], 'keyword1 OR keyword2 OR keyword3')
         self.assertEqual(r.json[0]['classes'], ['astro-ph'])
 
+        # deactivate the notification and make sure everything else is kept
+        r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
+                           headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                           data=json.dumps({'active': False}),
+                           content_type='application/json')
+
+        self.assertEqual(r.json['name'], 'test query')
+        self.assertFalse(r.json['stateful'])
+        self.assertEqual(r.json['type'], 'template')
+        self.assertFalse(r.json['active'])
+        self.assertEqual(r.json['frequency'], 'daily')
+        self.assertEqual(r.json['template'], 'arxiv')
+        self.assertEqual(r.json['data'], 'keyword1 OR keyword2 OR keyword3')
+        self.assertEqual(r.json['classes'], ['astro-ph'])
+
+        r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
+                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            data=json.dumps({'active': True}),
+                            content_type='application/json')
+
+        self.assertTrue(r.json['active'])
+        self.assertEqual(r.json['data'], 'keyword1 OR keyword2 OR keyword3')
+
         # add a second query
         r = self.client.post(url_for('user.myads_notifications'),
                              headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
