@@ -1,3 +1,4 @@
+test
 # vault
 
 [![Travis Status](https://travis-ci.org/adsabs/vault.png?branch=master)](https://travis-ci.org/adsabs/vault)
