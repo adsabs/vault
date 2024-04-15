@@ -38,9 +38,10 @@ class TestServices(TestCaseDatabase):
         self.assertTrue(r == {'query': 'fq=%7B%21bitset%7D&q=foo', 'bigquery': 'foo\nbar'})
 
         # Typical general myADS notification
-        r = utils.cleanup_payload({'query': {'fq': ['{!type=aqp v=$fq_database}'], 'fq_database': ['(database:astronomy)'], 'q': ['star'], 'sort': ['citation_count desc, bibcode desc']},
+        r = utils.cleanup_payload({'query': {'fq': ['{!type=aqp v=$fq_database}'], 'fq_database': ['(database:astronomy)'], 'q': ['star'], 'sort': ['citation_count desc, date desc']},
                                    })
-        self.assertTrue(r == {'bigquery': '', 'query': 'fq=%7B%21type%3Daqp+v%3D%24fq_database%7D&fq_database=%28database%3Aastronomy%29&q=star&sort=citation_count+desc%2C+bibcode+desc'})
+        
+        self.assertTrue(r == {'bigquery': '', 'query': 'fq=%7B%21type%3Daqp+v%3D%24fq_database%7D&fq_database=%28database%3Aastronomy%29&q=star&sort=citation_count+desc%2C+date+desc'})
 
     @httpretty.activate
     def test_upsert_myads(self):
