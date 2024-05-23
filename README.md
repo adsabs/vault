@@ -85,16 +85,16 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" "htt
  * To save user-data (i.e. preferences)
 
 ```$bash
-curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/user-data" -X POST -d $'{"foo": "bar"}'
+curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-api-uid: 1" "http://localhost:5000/user-data" -X POST -d $'{"foo": "bar"}'
 ```
 
- note: The X-Adsws-Uid header *must* be present (normally, it is set by the API gateway)
+ note: The X-api-uid header *must* be present (normally, it is set by the API gateway)
 
 
  * To get the user-data:
 
 ```$bash
-curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/user-data" -X GET
+curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-api-uid: 1" "http://localhost:5000/user-data" -X GET
 ```
 
 ### /configuration
@@ -102,11 +102,11 @@ curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "
  * Retrieve Bumblebee configuration (values that can be used to customize user experience)
 
  ```$bash
-curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/configuration" -X GET
+curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-api-uid: 1" "http://localhost:5000/configuration" -X GET
 
 {"foo": "bar"}
 
-curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-Adsws-Uid: 1" "http://localhost:5000/configuration/foo" -X GET
+curl -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" -H "X-api-uid: 1" "http://localhost:5000/configuration/foo" -X GET
 
 "bar"
 ```

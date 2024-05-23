@@ -137,7 +137,7 @@ class TestServices(TestCaseDatabase):
 
         # no data
         r = self.client.get(url_for('user.store_data'),
-                headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                headers={'Authorization': 'secret', 'X-api-uid': '2'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
 
@@ -146,7 +146,7 @@ class TestServices(TestCaseDatabase):
 
         # try to save something broken (it has to be json)
         r = self.client.post(url_for('user.store_data'),
-                headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                headers={'Authorization': 'secret', 'X-api-uid': '2'},
                 data=json.dumps({'foo': 'bar'})[0:-2],
                 content_type='application/json')
 
@@ -155,7 +155,7 @@ class TestServices(TestCaseDatabase):
 
         # save something
         r = self.client.post(url_for('user.store_data'),
-                headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                headers={'Authorization': 'secret', 'X-api-uid': '2'},
                 data=json.dumps({'foo': 'bar'}),
                 content_type='application/json')
 
@@ -164,7 +164,7 @@ class TestServices(TestCaseDatabase):
 
         # get it back
         r = self.client.get(url_for('user.store_data'),
-                headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                headers={'Authorization': 'secret', 'X-api-uid': '2'},
                 content_type='application/json')
 
         self.assertStatus(r, 200)
@@ -172,7 +172,7 @@ class TestServices(TestCaseDatabase):
 
         # save something else
         r = self.client.post(url_for('user.store_data'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '2'},
                              data=json.dumps({'db': 'testdb'}),
                              content_type='application/json')
 
@@ -181,7 +181,7 @@ class TestServices(TestCaseDatabase):
 
         # get it back
         r = self.client.get(url_for('user.store_data'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '2'},
                             content_type='application/json')
 
         self.assertStatus(r, 200)
@@ -189,7 +189,7 @@ class TestServices(TestCaseDatabase):
 
         # modify it
         r = self.client.post(url_for('user.store_data'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '2'},
                              data=json.dumps({'db': 'testdb2'}),
                              content_type='application/json')
 
@@ -198,7 +198,7 @@ class TestServices(TestCaseDatabase):
 
         # get everything back
         r = self.client.get(url_for('user.store_data'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '2'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '2'},
                             content_type='application/json')
 
         self.assertStatus(r, 200)
@@ -216,13 +216,13 @@ class TestServices(TestCaseDatabase):
 
         # make sure no setups exist
         r = self.client.get(url_for('user.myads_notifications'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '3'})
 
         self.assertStatus(r, 204)
 
         # try saving a query with bad data
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '3'},
                              data=json.dumps({'name': 'Query 1', 'qid': qid, 'stateful': True,
                                               'frequency': 'bad data', 'type': 'query'}),
                              content_type='application/json')
@@ -231,7 +231,7 @@ class TestServices(TestCaseDatabase):
 
         # save the query correctly
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '3'},
                              data=json.dumps({'name': 'Query 1', 'qid': qid, 'stateful': True, 'frequency': 'daily', 'type': 'query'}),
                              content_type='application/json')
 
@@ -242,7 +242,7 @@ class TestServices(TestCaseDatabase):
 
         # edit the query with bad data
         r = self.client.put(url_for('user.myads_notifications', myads_id=myads_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '3'},
                             data=json.dumps({'name': 'Query 1 - edited', 'stateful': 'bad data'}),
                             content_type='application/json')
 
@@ -250,7 +250,7 @@ class TestServices(TestCaseDatabase):
 
         # edit the query correctly
         r = self.client.put(url_for('user.myads_notifications', myads_id=myads_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '3'},
                             data=json.dumps({'name': 'Query 1 - edited'}),
                             content_type='application/json')
 
@@ -271,7 +271,7 @@ class TestServices(TestCaseDatabase):
 
         # get all myADS setups via the BBB endpoint
         r = self.client.get(url_for('user.myads_notifications'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '3'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '3'})
 
         self.assertStatus(r, 200)
         self.assertEqual(r.json[0]['name'], 'Query 1 - edited')
@@ -310,7 +310,7 @@ class TestServices(TestCaseDatabase):
 
         # try to store a query with insufficient metadata
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
 
@@ -318,7 +318,7 @@ class TestServices(TestCaseDatabase):
 
         # try to store a query with data keyword of the wrong type (also insufficient metadata)
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'data': 123}),
                              content_type='application/json')
 
@@ -326,7 +326,7 @@ class TestServices(TestCaseDatabase):
 
         # try to store a query with the classes keyword of the wrong type
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template', 'template': 'arxiv', 'classes': 'astro-ph', 'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
 
@@ -334,7 +334,7 @@ class TestServices(TestCaseDatabase):
 
         # store a query correctly
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template', 'template': 'keyword', 'data': 'keyword1 OR keyword2'}),
                              content_type='application/json')
 
@@ -363,7 +363,7 @@ class TestServices(TestCaseDatabase):
 
         # successfully retrieve a query setup
         r = self.client.get(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         self.assertStatus(r, 200)
         self.assertEqual(r.json[0]['id'], query_id)
@@ -375,7 +375,7 @@ class TestServices(TestCaseDatabase):
 
         # successfully delete the query setup
         r = self.client.delete(url_for('user.myads_notifications', myads_id=query_id),
-                               headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                               headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         self.assertStatus(r, 204)
 
@@ -386,13 +386,13 @@ class TestServices(TestCaseDatabase):
 
         # ensure the get returns the right status for a missing query
         r = self.client.get(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         self.assertStatus(r, 404)
 
         # save an arxiv template query successfully
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'template': 'arxiv',
                                               'data': 'keyword1 OR keyword2',
@@ -444,7 +444,7 @@ class TestServices(TestCaseDatabase):
 
         # edit the stored query
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'},
                             data=json.dumps({'type': 'template',
                                              'template': 'arxiv',
                                              'data': 'keyword1 OR keyword2 OR keyword3',
@@ -455,7 +455,7 @@ class TestServices(TestCaseDatabase):
 
         # check editing the query name
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'},
                             data=json.dumps({'type': 'template',
                                              'template': 'arxiv',
                                              'name': 'keyword1, etc. - Recent Papers',
@@ -468,7 +468,7 @@ class TestServices(TestCaseDatabase):
         self.assertEqual(r.json['name'], 'keyword2, etc. - Recent Papers')
 
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'},
                             data=json.dumps({'type': 'template',
                                              'template': 'arxiv',
                                              'name': 'test query',
@@ -481,7 +481,7 @@ class TestServices(TestCaseDatabase):
         self.assertEqual(r.json['name'], 'test query')
 
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'},
                             data=json.dumps({'type': 'template',
                                              'template': 'arxiv',
                                              'data': 'keyword1 OR keyword2 OR keyword3',
@@ -509,7 +509,7 @@ class TestServices(TestCaseDatabase):
 
         # deactivate the notification and make sure everything else is kept
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
-                           headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                           headers={'Authorization': 'secret', 'X-api-uid': '4'},
                            data=json.dumps({'active': False}),
                            content_type='application/json')
 
@@ -523,7 +523,7 @@ class TestServices(TestCaseDatabase):
         self.assertEqual(r.json['classes'], ['astro-ph'])
 
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'},
                             data=json.dumps({'active': True}),
                             content_type='application/json')
 
@@ -532,7 +532,7 @@ class TestServices(TestCaseDatabase):
 
         # add a second query
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'template': 'authors',
                                               'data': 'author:"Kurtz, M."'}),
@@ -543,7 +543,7 @@ class TestServices(TestCaseDatabase):
 
         # get all queries back
         r = self.client.get(url_for('user.myads_notifications'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         self.assertStatus(r, 200)
         self.assertEqual(r.json[0]['name'], 'test query')
@@ -551,7 +551,7 @@ class TestServices(TestCaseDatabase):
 
         # save an arXiv query without keywords
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'template': 'arxiv',
                                               'classes': ['cs']}),
@@ -561,7 +561,7 @@ class TestServices(TestCaseDatabase):
         self.assertEqual(r.json['data'], None)
 
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'data': '',
                                               'template': 'arxiv',
@@ -573,7 +573,7 @@ class TestServices(TestCaseDatabase):
 
         # test a blank arXiv query
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'template': 'arxiv',
                                               'classes': ['astro-ph']}),
@@ -584,7 +584,7 @@ class TestServices(TestCaseDatabase):
 
         # make sure it's editable
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'},
                             data=json.dumps({'type': 'template',
                                              'template': 'arxiv',
                                              'active': False}),
@@ -593,7 +593,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
 
         r = self.client.put(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'},
                             data=json.dumps({'type': 'template',
                                              'template': 'arxiv',
                                              'data': 'keyword1',
@@ -604,7 +604,7 @@ class TestServices(TestCaseDatabase):
 
         # test the citation query construction
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'template': 'citations',
                                               'data': 'author:"Kurtz, Michael"'}),
@@ -614,7 +614,7 @@ class TestServices(TestCaseDatabase):
         query_id = r.json['id']
 
         r = self.client.get(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         self.assertStatus(r, 200)
         self.assertEqual(r.json[0]['id'], query_id)
@@ -625,19 +625,19 @@ class TestServices(TestCaseDatabase):
         self.assertEqual(r.json[0]['type'], 'template')
 
         r = self.client.get(url_for('user.get_myads', user_id=4),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         self.assertTrue(r.json[4]['query'][0]['q'] == 'citations(author:"Kurtz, Michael")')
 
         # a passed start date shouldn't matter to citations queries
         r2 = self.client.get(url_for('user.get_myads', user_id=4, start_isodate=start_iso_date),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         self.assertTrue(r2.json[4]['query'][0]['q'] == r.json[4]['query'][0]['q'])
 
         # test the author query construction
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '4'},
                              data=json.dumps({'type': 'template',
                                               'template': 'authors',
                                               'data': 'author:"Kurtz, Michael"'}),
@@ -647,7 +647,7 @@ class TestServices(TestCaseDatabase):
         query_id = r.json['id']
 
         r = self.client.get(url_for('user.myads_notifications', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         self.assertStatus(r, 200)
         self.assertEqual(r.json[0]['id'], query_id)
@@ -659,7 +659,7 @@ class TestServices(TestCaseDatabase):
 
         # check start dates in constructed query - no start date should default to now - the weekly time range
         r = self.client.get(url_for('user.get_myads', user_id=4),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         start_date = (adsmutils.get_date() - datetime.timedelta(days=self.app.config.get('MYADS_WEEKLY_TIME_RANGE'))).date()
         self.assertTrue('author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_date, end_date)
@@ -668,7 +668,7 @@ class TestServices(TestCaseDatabase):
         # passing an earlier start date should respect that date
         start_iso = (adsmutils.get_date() - datetime.timedelta(days=40)).isoformat()
         r = self.client.get(url_for('user.get_myads', user_id=4, start_isodate=start_iso),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '4'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '4'})
 
         start_iso_date = parser.parse(start_iso).date()
         self.assertTrue('author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"]'.format(start_iso_date, end_date)
@@ -712,14 +712,14 @@ class TestServices(TestCaseDatabase):
 
         for t in test_data:
             q = self.client.post(url_for('user.myads_notifications'),
-                                 headers={'Authorization': 'secret', 'X-Adsws-Uid': '101'},
+                                 headers={'Authorization': 'secret', 'X-api-uid': '101'},
                                  data=json.dumps(t),
                                  content_type='application/json')
 
             self.assertStatus(q, 200)
 
             s = self.client.get(url_for('user.execute_myads_query', myads_id=q.json['id']),
-                                headers={'Authorization': 'secret', 'X-Adsws-Uid': '101'})
+                                headers={'Authorization': 'secret', 'X-api-uid': '101'})
 
             self.assertStatus(s, 200)
             self.assertIn(b'Galindo-Guil, Francisco Jos\xc3\xa9'.decode('utf8'), s.json[0]['q'])
@@ -746,14 +746,14 @@ class TestServices(TestCaseDatabase):
         # can't use as anonymous user
         user_id = self.app.config.get('BOOTSTRAP_USER_ID')
         r = self.client.get(url_for('user.execute_myads_query', myads_id=123),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
+                            headers={'Authorization': 'secret', 'X-api-uid': user_id})
 
         self.assertStatus(r, 400)
 
         user_id = 6
 
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id},
+                             headers={'Authorization': 'secret', 'X-api-uid': user_id},
                              data=json.dumps({'type': 'template',
                                               'template': 'authors',
                                               'data': 'author:"Kurtz, Michael"'}),
@@ -763,7 +763,7 @@ class TestServices(TestCaseDatabase):
         query_id = r.json['id']
 
         r = self.client.get(url_for('user.execute_myads_query', myads_id=query_id),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
+                            headers={'Authorization': 'secret', 'X-api-uid': user_id})
 
         start_date = (adsmutils.get_date() - datetime.timedelta(days=self.app.config.get('MYADS_WEEKLY_TIME_RANGE'))).date()
 
@@ -777,7 +777,7 @@ class TestServices(TestCaseDatabase):
         # can't use as anonymous user
         user_id = self.app.config.get('BOOTSTRAP_USER_ID')
         r = self.client.get(url_for('user.import_myads'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
+                            headers={'Authorization': 'secret', 'X-api-uid': user_id})
 
         self.assertStatus(r, 400)
 
@@ -792,7 +792,7 @@ class TestServices(TestCaseDatabase):
         )
 
         r = self.client.get(url_for('user.import_myads'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id})
+                            headers={'Authorization': 'secret', 'X-api-uid': user_id})
 
         self.assertStatus(r, 200)
         self.assertEqual(len(r.json['new']), 1)
@@ -807,7 +807,7 @@ class TestServices(TestCaseDatabase):
 
         # make sure no setups exist
         r = self.client.get(url_for('user.myads_notifications'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '33'})
 
         self.assertStatus(r, 204)
 
@@ -821,7 +821,7 @@ class TestServices(TestCaseDatabase):
 
         # save some queries
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '33'},
                              data=json.dumps({'name': 'Query 1', 'qid': qid, 'stateful': True,
                                               'frequency': 'daily', 'type': 'query'}),
                              content_type='application/json')
@@ -830,7 +830,7 @@ class TestServices(TestCaseDatabase):
         self.assertTrue(r.json['active'])
 
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'},
+                             headers={'Authorization': 'secret', 'X-api-uid': '33'},
                              data=json.dumps({'name': 'Query 2', 'qid': qid, 'stateful': True,
                                               'frequency': 'daily', 'type': 'query'}),
                              content_type='application/json')
@@ -855,7 +855,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
 
         r = self.client.get(url_for('user.myads_notifications'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '33'})
         self.assertStatus(r, 200)
 
         for setup in r.json:
@@ -873,7 +873,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
 
         r = self.client.get(url_for('user.myads_notifications'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '33'})
 
         for setup in r.json:
             self.assertFalse(setup['active'])
@@ -887,7 +887,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
 
         r = self.client.get(url_for('user.myads_notifications'),
-                            headers={'Authorization': 'secret', 'X-Adsws-Uid': '33'})
+                            headers={'Authorization': 'secret', 'X-api-uid': '33'})
 
         for setup in r.json:
             self.assertTrue(setup['active'])
