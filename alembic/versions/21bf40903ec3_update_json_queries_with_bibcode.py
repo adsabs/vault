@@ -43,7 +43,6 @@ def update_queries(main_session):
     result = main_session.execute(sa.text(sql_query))
     records = result.fetchall()
 
-    breakpoint()
     update_queries = []
 
     for query_id, saved_queries in records:
