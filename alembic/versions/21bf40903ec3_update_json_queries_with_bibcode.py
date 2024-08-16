@@ -50,11 +50,11 @@ def update_queries(main_session):
         query = saved_queries['query']
         modified = False 
 
-        if 'date+desc' in query and 'bibcode+desc' in query: 
-            query = query.replace('%2C+bibcode+desc', '')
+        if 'date+desc%2C+bibcode+desc' in query: 
+            query = query.replace('%2C+bibcode+desc', '%2C+score+desc')
             modified = True 
-        elif 'date+asc' in query and 'bibcode+asc' in query: 
-            query = query.replace('%2C+bibcode+asc', '')
+        elif 'date+asc%2C+bibcode+asc' in query: 
+            query = query.replace('%2C+bibcode+asc', '%2C+score+asc')
             modified = True 
         elif 'bibcode+desc' in query: 
             query = query.replace('bibcode+desc', 'date+desc')
@@ -71,7 +71,6 @@ def update_queries(main_session):
             })
 
     current_app.logger.info('Records to update: {}'.format(len(update_queries)))
-
     try: 
         for item in update_queries:
             update_sql = sa.text("""
