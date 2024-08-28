@@ -13,8 +13,10 @@ down_revision = 'ffdbd392dc89'
 from alembic import op
 import sqlalchemy as sa
 import json
-from flask import current_app
+import logging 
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def update_queries(main_session): 
     sql_query = """
@@ -39,7 +41,7 @@ def update_queries(main_session):
         FROM filtered_queries
         """
     
-    current_app.logger.info('Getting records...')
+    logger.info('Getting records...')
     result = main_session.execute(sa.text(sql_query))
     records = result.fetchall()
 
@@ -70,7 +72,7 @@ def update_queries(main_session):
             'query': json.dumps(saved_queries).encode('utf-8')
             })
 
-    current_app.logger.info('Records to update: {}'.format(len(update_queries)))
+    logger.info('Records to update: {}'.format(len(update_queries)))
     try: 
         for item in update_queries:
             update_sql = sa.text("""
@@ -78,14 +80,14 @@ def update_queries(main_session):
                 SET query = :query
                 WHERE id = :id
             """)
-            current_app.logger.info('Updating record with id: {}'.format(item['id']))
+            logger.info('Updating record with id: {}'.format(item['id']))
             main_session.execute(update_sql, {'query': item['query'], 'id': item['id']})
 
-        current_app.logger.info('Total records updated: {}'.format(len(update_queries)))
+        logger.info('Total records updated: {}'.format(len(update_queries)))
         main_session.commit()
     except Exception as e: 
         main_session.rollback()
-        current_app.logger.error('Error occurred during update: {}'.format(str(e)))
+        logger.error('Error occurred during update: {}'.format(str(e)))
         raise
     finally:
         main_session.close()
@@ -95,7 +97,7 @@ def upgrade():
     try:
         update_queries(session)
     except Exception as e:
-        current_app.logger.error('Upgrade failed: {}'.format(str(e)))
+        logger.error('Upgrade failed: {}'.format(str(e)))
 
 def downgrade():
    pass
