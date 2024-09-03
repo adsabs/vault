@@ -14,9 +14,11 @@ from alembic import op
 import sqlalchemy as sa
 import json
 import logging 
+import sys 
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 def update_queries(main_session): 
     sql_query = """
