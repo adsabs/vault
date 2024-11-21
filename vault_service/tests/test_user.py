@@ -770,7 +770,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
         self.assertEqual(r.json, [{'q': 'author:"Kurtz, Michael" entdate:["{0}Z00:00" TO "{1}Z23:59"] '
                                             'pubdate:[{2}-00 TO *]'.format(start_date, now, beg_pubyear),
-                                       'sort': 'score desc, bibcode desc'}])
+                                       'sort': 'score desc, date desc'}])
 
     @httpretty.activate
     def test_myads_import(self):

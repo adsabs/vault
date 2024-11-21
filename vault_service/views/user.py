@@ -655,25 +655,26 @@ def _create_myads_query(template_type, frequency, data, classes=None, start_isod
         if frequency == 'daily':
             connector = [' ', ' NOT ']
             # keyword search should be sorted by score, "other recent" should be sorted by bibcode
-            sort_w_keywords = ['score desc, bibcode desc', 'bibcode desc']
+            sort_w_keywords = ['score desc, date desc', 'date desc']
         elif frequency == 'weekly':
             connector = [' ']
-            sort_w_keywords = ['score desc, bibcode desc']
+            sort_w_keywords = ['score desc, date desc']
         if not keywords:
             q = 'bibstem:arxiv {0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
                      format(classes, start_date, end_date, beg_pubyear)
-            sort = 'bibcode desc'
+            sort = 'date desc'
             out.append({'q': q, 'sort': sort})
         else:
             for c, s in zip(connector, sort_w_keywords):
                 q = 'bibstem:arxiv ({0}{1}({2})) entdate:["{3}Z00:00" TO "{4}Z23:59"] pubdate:[{5}-00 TO *]'.\
                     format(classes, c, keywords, start_date, end_date, beg_pubyear)
                 sort = s
+                
                 out.append({'q': q, 'sort': sort})
     elif template_type == 'citations':
         keywords = data
         q = 'citations({0})'.format(keywords)
-        sort = 'entry_date desc, bibcode desc'
+        sort = 'entry_date desc, date desc'
         out.append({'q': q, 'sort': sort})
     elif template_type == 'authors':
         keywords = data
@@ -682,7 +683,7 @@ def _create_myads_query(template_type, frequency, data, classes=None, start_isod
             start_date = start_isodate
         q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
             format(keywords, start_date, end_date, beg_pubyear)
-        sort = 'score desc, bibcode desc'
+        sort = 'score desc, date desc'
         out.append({'q': q, 'sort': sort})
     elif template_type == 'keyword':
         keywords = data
@@ -692,15 +693,15 @@ def _create_myads_query(template_type, frequency, data, classes=None, start_isod
         # most recent
         q = '{0} entdate:["{1}Z00:00" TO "{2}Z23:59"] pubdate:[{3}-00 TO *]'.\
             format(keywords, start_date, end_date, beg_pubyear)
-        sort = 'entry_date desc, bibcode desc'
+        sort = 'entry_date desc, date desc'
         out.append({'q': q, 'sort': sort})
         # most popular
         q = 'trending({0})'.format(keywords)
-        sort = 'score desc, bibcode desc'
+        sort = 'score desc, date desc'
         out.append({'q': q, 'sort': sort})
         # most cited
         q = 'useful({0})'.format(keywords)
-        sort = 'score desc, bibcode desc'
+        sort = 'score desc, date desc'
         out.append({'q': q, 'sort': sort})
     elif template_type is None and data:
         # General query - for consistency with the rest of templates,
