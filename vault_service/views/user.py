@@ -56,7 +56,7 @@ def query(queryid=None):
     # values previously stored in the database (infinite cache like behavior)
     query = json.dumps(payload).encode('utf8')
     # digest is made of a bytestream
-    qid = md5((headers['X-Adsws-Uid'].encode('utf8') + query)).hexdigest()
+    qid = md5((headers['X-Api-Uid'].encode('utf8') + query)).hexdigest()
     with current_app.session_scope() as session:
         q = session.query(Query).filter_by(qid=qid).first()
         if q:
@@ -151,7 +151,7 @@ def store_data():
     except Exception as e:
         return json.dumps({'msg': hasattr(e, 'message') and e.message or e.description}), 400
 
-    user_id = int(headers['X-Adsws-Uid'])
+    user_id = int(headers['X-Api-Uid'])
 
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
@@ -219,7 +219,7 @@ def myads_notifications(myads_id=None):
     except Exception as e:
         return json.dumps({'msg': e.message or e.description}), 400
 
-    user_id = int(headers['X-Adsws-Uid'])
+    user_id = int(headers['X-Api-Uid'])
 
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
@@ -578,7 +578,7 @@ def execute_myads_query(myads_id):
     except Exception as e:
         return json.dumps({'msg': e.message or e.description}), 400
 
-    user_id = int(headers['X-Adsws-Uid'])
+    user_id = int(headers['X-Api-Uid'])
 
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
@@ -854,7 +854,7 @@ def import_myads():
         return json.dumps({'msg': e.message or e.description}), 400
 
     # this header is always set by adsws, so we trust it
-    user_id = int(headers['X-Adsws-Uid'])
+    user_id = int(headers['X-Api-Uid'])
 
     # use service token here; elevated operation
     if current_app.config.get('SERVICE_TOKEN', None):

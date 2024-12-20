@@ -129,7 +129,7 @@ class TestServices(TestCaseDatabase):
                               { "bibcode":"2005JGRC..110.4004Y" }]}}""")
 
         r = self.client.post(url_for('user.myads_notifications'),
-                             headers={'Authorization': 'secret', 'X-Adsws-Uid': user_id},
+                             headers={'Authorization': 'secret', 'X-api-uid': user_id},
                              data=json.dumps({'type': 'template',
                                               'template': 'citations',
                                               'data': 'author:"Koliopanos, Filippos"'}),
