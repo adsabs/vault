@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB, ENUM, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableDict
 from adsmutils import UTCDateTime, get_date
+import sqlalchemy as sa
 
 
 Base = declarative_base()
@@ -78,6 +79,7 @@ class MyADS(Base):
     type = Column(myads_type)
     name = Column(String)
     active = Column(Boolean)
+    scix_ui = Column(Boolean, nullable=True, server_default=sa.text('false'), default=False)
     stateful = Column(Boolean)
     frequency = Column(myads_frequency)
     template = Column(myads_template, nullable=True)
