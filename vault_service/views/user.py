@@ -763,6 +763,7 @@ def get_myads(user_id, start_isodate=None):
                  'name': s.name,
                  'type': s.type,
                  'active': s.active,
+                 'scix_ui': s.scix_ui,
                  'stateful': s.stateful,
                  'frequency': s.frequency,
                  'template': s.template,
