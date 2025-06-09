@@ -1,11 +1,8 @@
 import sys, os
-from urllib.parse import urlencode
-from flask import url_for, request
+from flask import url_for
 import unittest
 import json
 import httpretty
-import cgi
-from io import StringIO
 import datetime
 from dateutil import parser
 
@@ -14,7 +11,6 @@ if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
 from vault_service.models import Query, User, MyADS
-from vault_service.views import utils
 from vault_service.tests.base import TestCaseDatabase
 import adsmutils
 
@@ -891,6 +887,92 @@ class TestServices(TestCaseDatabase):
 
         for setup in r.json:
             self.assertTrue(setup['active'])
+
+    @httpretty.activate
+    def test_scixplorer_referrer_updates_all_notifications(self):
+        """Test that when a user creates a notification from Scixplorer, all their notifications get scix_ui=True"""
+        
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('VAULT_SOLR_QUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+            "responseHeader":{
+            "status":0, "QTime":0,
+            "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+            "response":{"numFound":10456930,"start":0,"docs":[
+              { "bibcode":"2005JGRC..110.4002G" },
+              { "bibcode":"2005JGRC..110.4003N" },
+              { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        # First create a query to use for testing
+        r = self.client.post(url_for('user.query'),
+                headers={'Authorization': 'secret'},
+                data=json.dumps({'q': 'foo:bar'}),
+                content_type='application/json')
+        
+        self.assertStatus(r, 200)
+        qid = r.json['qid']
+        
+        # Create first notification WITHOUT Host (query type)
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-api-uid': '42'},
+                             data=json.dumps({'name': 'Regular Query', 'qid': qid, 'stateful': True, 
+                                             'frequency': 'daily', 'type': 'query'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json['name'] == 'Regular Query')
+        first_notification_id = r.json['id']
+        
+        # Create a second notification WITHOUT Host (template type)
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-api-uid': '42'},
+                             data=json.dumps({'type': 'template',
+                                             'template': 'keyword',
+                                             'data': 'exoplanet'}),
+                             content_type='application/json')
+                             
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json['name'] == 'exoplanet')
+        second_notification_id = r.json['id']
+        
+        # Verify scix_ui is False for both notifications
+        with self.app.session_scope() as session:
+            notification1 = session.query(MyADS).filter_by(id=first_notification_id).first()
+            notification2 = session.query(MyADS).filter_by(id=second_notification_id).first()
+            self.assertFalse(notification1.scix_ui)
+            self.assertFalse(notification2.scix_ui)
+        
+        # Create a third notification WITH Scixplorer Host (query type)
+        r = self.client.post(
+            url_for('user.myads_notifications'),
+            data=json.dumps({
+                'name': 'Scixplorer Query',
+                'qid': qid,
+                'stateful': True,
+                'frequency': 'daily',
+                'type': 'query'
+            }),
+            content_type='application/json',
+            headers={
+                'Authorization': 'secret',
+                'X-api-uid': '42', 
+            },
+            environ_overrides={'HTTP_HOST': self.app.config['SCIXPLORER_HOST']}
+        )
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json['name'] == 'Scixplorer Query')
+        third_notification_id = r.json['id']
+    
+        # Verify ALL notifications now have scix_ui=True
+        with self.app.session_scope() as session:
+            notification1 = session.query(MyADS).filter_by(id=first_notification_id).first()
+            notification2 = session.query(MyADS).filter_by(id=second_notification_id).first()
+            notification3 = session.query(MyADS).filter_by(id=third_notification_id).first()
+            self.assertTrue(notification1.scix_ui)
+            self.assertTrue(notification2.scix_ui)
+            self.assertTrue(notification3.scix_ui)
 
 if __name__ == '__main__':
     unittest.main()
