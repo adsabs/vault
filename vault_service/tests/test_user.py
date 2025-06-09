@@ -914,7 +914,7 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
         qid = r.json['qid']
         
-        # Create first notification WITHOUT Scixplorer referrer (query type)
+        # Create first notification WITHOUT Host (query type)
         r = self.client.post(url_for('user.myads_notifications'),
                              headers={'Authorization': 'secret', 'X-api-uid': '42'},
                              data=json.dumps({'name': 'Regular Query', 'qid': qid, 'stateful': True, 
@@ -925,7 +925,7 @@ class TestServices(TestCaseDatabase):
         self.assertTrue(r.json['name'] == 'Regular Query')
         first_notification_id = r.json['id']
         
-        # Create a second notification WITHOUT Scixplorer referrer (template type)
+        # Create a second notification WITHOUT Host (template type)
         r = self.client.post(url_for('user.myads_notifications'),
                              headers={'Authorization': 'secret', 'X-api-uid': '42'},
                              data=json.dumps({'type': 'template',
@@ -959,7 +959,7 @@ class TestServices(TestCaseDatabase):
                 'Authorization': 'secret',
                 'X-api-uid': '42', 
             },
-            environ_overrides={'HTTP_HOST': 'scixplorer.org'}
+            environ_overrides={'HTTP_HOST': self.app.config['SCIXPLORER_HOST']}
         )
         self.assertStatus(r, 200)
         self.assertTrue(r.json['name'] == 'Scixplorer Query')

@@ -220,7 +220,6 @@ def myads_notifications(myads_id=None):
         return json.dumps({'msg': e.message or e.description}), 400
 
     user_id = int(headers['X-Api-Uid'])
-    scix_ui_header = 'scixplorer.org' in request.headers.get('Host', '')
 
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
@@ -275,7 +274,7 @@ def myads_notifications(myads_id=None):
 
                 return json.dumps(output), 200
     elif request.method == 'POST':
-        msg, status_code = _create_myads_notification(payload, headers, user_id, scix_ui_header)
+        msg, status_code = _create_myads_notification(payload, headers, user_id)
     elif request.method == 'PUT':
         msg, status_code = _edit_myads_notification(payload, headers, user_id, myads_id)
     elif request.method == 'DELETE':
@@ -284,7 +283,7 @@ def myads_notifications(myads_id=None):
     return msg, status_code
 
 
-def _create_myads_notification(payload=None, headers=None, user_id=None, scix_ui_header=False):
+def _create_myads_notification(payload=None, headers=None, user_id=None):
     """
     Create a new myADS notification
     :return: json, details of new setup
@@ -294,6 +293,8 @@ def _create_myads_notification(payload=None, headers=None, user_id=None, scix_ui
         ntype = payload['type']
     except KeyError:
         return json.dumps({'msg': 'No notification type passed'}), 400
+    
+    scix_ui_header = current_app.config['SCIXPLORER_HOST'] in request.headers.get('Host', '')
 
     with current_app.session_scope() as session:
         try:
