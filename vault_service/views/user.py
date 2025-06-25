@@ -293,6 +293,8 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
         ntype = payload['type']
     except KeyError:
         return json.dumps({'msg': 'No notification type passed'}), 400
+    
+    scix_ui_header = current_app.config['SCIXPLORER_HOST'] in request.headers.get('Host', '')
 
     with current_app.session_scope() as session:
         try:
@@ -322,6 +324,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                           name=payload.get('name'),
                           active=True,
                           stateful=payload.get('stateful'),
+                          scix_ui=scix_ui_header,
                           frequency=payload.get('frequency'))
 
     elif ntype == 'template':
@@ -391,6 +394,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                       frequency=frequency,
                       template=template,
                       classes=classes,
+                      scix_ui=scix_ui_header,
                       data=data)
     else:
         return json.dumps({'msg': 'Bad data passed; type must be query or template'}), 400
@@ -402,6 +406,17 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             session.flush()
             # qid is an int in the myADS table
             myads_id = setup.id
+            
+            # If user is coming from scixplorer but existing notifications don't have scix_ui set to True, update them
+            if scix_ui_header:
+                # Check if there are any of user's notifications with scix_ui=False
+                existing_notifications = session.query(MyADS).filter_by(user_id=user_id).filter_by(scix_ui=False).all()
+                current_app.logger.info(f'Total notifications to update: {len(existing_notifications)}')
+                if existing_notifications:
+                    for notification in existing_notifications:
+                        current_app.logger.info(f'Updating notification: {notification.id} for user: {user_id}')
+                        notification.scix_ui = True
+            
             session.commit()
         except exc.StatementError as e:
             session.rollback()
@@ -748,6 +763,7 @@ def get_myads(user_id, start_isodate=None):
                  'name': s.name,
                  'type': s.type,
                  'active': s.active,
+                 'scix_ui': s.scix_ui,
                  'stateful': s.stateful,
                  'frequency': s.frequency,
                  'template': s.template,
