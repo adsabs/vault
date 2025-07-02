@@ -249,9 +249,6 @@ def myads_notifications(myads_id=None):
                           'data': setup.data,
                           'created': setup.created.isoformat(),
                           'updated': setup.updated.isoformat()}
-                # Only include get_other_papers for daily arXiv notifications
-                if setup.template == 'arxiv' and setup.frequency == 'daily':
-                    output['get_other_papers'] = setup.get_other_papers
 
                 return json.dumps([output]), 200
 
@@ -273,9 +270,6 @@ def myads_notifications(myads_id=None):
                          'data': s.data,
                          'created': s.created.isoformat(),
                          'updated': s.updated.isoformat()}
-                    # Only include get_other_papers for daily arXiv notifications
-                    if s.template == 'arxiv' and s.frequency == 'daily':
-                        o['get_other_papers'] = s.get_other_papers
                     output.append(o)
 
                 return json.dumps(output), 200
@@ -334,8 +328,6 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                           frequency=payload.get('frequency'))
 
     elif ntype == 'template':
-
-        get_other_papers = False
         # handles both None values and empty strings
         if not payload.get('data'):
             payload['old_data'] = payload.get('data', None)
@@ -366,8 +358,6 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             data = payload.get('data', None)
             stateful = False
             frequency = payload.get('frequency', 'daily')
-            if frequency == 'daily': 
-                get_other_papers = payload.get('get_other_papers', True)
             if payload.get('data', None):
                 name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
             else:
@@ -405,7 +395,6 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                       template=template,
                       classes=classes,
                       scix_ui=scix_ui_header,
-                      get_other_papers=get_other_papers,
                       data=data)
     else:
         return json.dumps({'msg': 'Bad data passed; type must be query or template'}), 400
@@ -448,9 +437,6 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                   'data': setup.data,
                   'created': setup.created.isoformat(),
                   'updated': setup.updated.isoformat()}
-        # Only include get_other_papers for daily arXiv notifications
-        if setup.template == 'arxiv' and setup.frequency == 'daily':
-            output['get_other_papers'] = setup.get_other_papers
 
     return json.dumps(output), 200
 
@@ -559,9 +545,6 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
         setup.active = payload.get('active', setup.active)
         setup.stateful = payload.get('stateful', setup.stateful)
         setup.frequency = payload.get('frequency', setup.frequency)
-        # Only update get_other_papers for daily arXiv notifications
-        if setup.template == 'arxiv' and setup.frequency == 'daily':
-            setup.get_other_papers = payload.get('get_other_papers', setup.get_other_papers)
 
         try:
             session.begin_nested()
@@ -590,9 +573,6 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                   'data': setup.data,
                   'created': setup.created.isoformat(),
                   'updated': setup.updated.isoformat()}
-        # Only include get_other_papers for daily arXiv notifications
-        if setup.template == 'arxiv' and setup.frequency == 'daily':
-            output['get_other_papers'] = setup.get_other_papers
 
     return json.dumps(output), 200
 
@@ -791,9 +771,6 @@ def get_myads(user_id, start_isodate=None):
                  'data': s.data,
                  'created': s.created.isoformat(),
                  'updated': s.updated.isoformat()}
-            # Only include get_other_papers for daily arXiv notifications  
-            if s.template == 'arxiv' and s.frequency == 'daily':
-                o['get_other_papers'] = s.get_other_papers
 
             if s.type == 'query':
                 try:
