@@ -552,9 +552,10 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
         setup.active = payload.get('active', setup.active)
         setup.stateful = payload.get('stateful', setup.stateful)
         setup.frequency = payload.get('frequency', setup.frequency)
-        # Only update get_other_papers for daily arXiv notifications
-        if setup.template == 'arxiv' and setup.frequency == 'daily':
-            setup.get_other_papers = payload.get('get_other_papers', setup.get_other_papers)
+
+        # Only update get_other_papers for daily arXiv notifications and if the payload has a value
+        if setup.template == 'arxiv' and setup.frequency == 'daily' and payload.get('get_other_papers', None) is not None:
+            setup.get_other_papers = payload.get('get_other_papers')
 
         try:
             session.begin_nested()
@@ -583,6 +584,7 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                   'data': setup.data,
                   'created': setup.created.isoformat(),
                   'updated': setup.updated.isoformat()}
+        
         # Only include get_other_papers for daily arXiv notifications
         if setup.template == 'arxiv' and setup.frequency == 'daily':
             output['get_other_papers'] = setup.get_other_papers
@@ -804,10 +806,13 @@ def get_myads(user_id, start_isodate=None):
             else:
                 qid = None
                 data = s.data
+                if s.template == 'arxiv' and s.frequency == 'daily':
+                    o['get_other_papers'] = s.get_other_papers
                 query = _create_myads_query(s.template, s.frequency, data, classes=s.classes, start_isodate=start_isodate, get_other_papers=s.get_other_papers)
 
             o['qid'] = qid
             o['query'] = query
+            
 
             output.append(o)
 
