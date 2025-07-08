@@ -154,14 +154,15 @@ def store_data():
     user_id = int(headers['X-Api-Uid'])
 
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
-        return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
+        return json.dumps({'msg': "Sorry, you can't use this service as an anonymous user"}), 400
 
     if request.method == 'GET':
         with current_app.session_scope() as session:
-            q = session.query(User).filter_by(id=user_id).first()
-            if not q:
-                return '{}', 200 # or return 404?
-            return json.dumps(q.user_data) or '{}', 200
+            user = session.query(User).filter_by(id=user_id).first()
+            if not user:
+                return '{}', 200
+            return json.dumps(user.user_data) or '{}', 200
+
     elif request.method == 'POST':
         # limit both number of keys and length of value to keep db clean
         if len(max(list(payload.values()), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
@@ -170,30 +171,18 @@ def store_data():
             return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
 
         with current_app.session_scope() as session:
-            try:
-                q = session.query(User).filter_by(id=user_id).with_for_update(of=User).one()
+            user = session.query(User).filter_by(id=user_id).with_for_update(of=User).first()
+            if not user:
+                data = payload.copy()
+                user = User(id=user_id, user_data=data)
+                session.add(user)
+            else:
                 try:
-                    data = q.user_data
+                    data = user.user_data or {}
                 except TypeError:
                     data = {}
-            except ormexc.NoResultFound:
-                data = payload
-                u = User(id=user_id, user_data=data)
-                try:
-                    session.add(u)
-                    session.commit()
-                    return json.dumps(data), 200
-                except exc.IntegrityError:
-                    q = session.query(User).filter_by(id=user_id).with_for_update(of=User).one()
-                    try:
-                        data = q.user_data
-                    except TypeError:
-                        data = {}
-
-            if data is None:
-                data = {}
-            data.update(payload)
-            q.user_data = data
+                data.update(payload)
+                user.user_data = data
 
             session.begin_nested()
             try:
