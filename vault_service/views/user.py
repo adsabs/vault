@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask import current_app
-from flask import request, url_for
+from flask import request
 
 import json
 from hashlib import md5
