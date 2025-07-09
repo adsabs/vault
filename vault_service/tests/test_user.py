@@ -974,5 +974,288 @@ class TestServices(TestCaseDatabase):
             self.assertTrue(notification2.scix_ui)
             self.assertTrue(notification3.scix_ui)
 
+    @httpretty.activate
+    def test_get_other_papers_flag_creation(self):
+        '''Tests creation of arXiv daily notifications with get_other_papers flag'''
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('VAULT_SOLR_QUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+                    "responseHeader":{
+                    "status":0, "QTime":0,
+                    "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+                    "response":{"numFound":10456930,"start":0,"docs":[
+                      { "bibcode":"2005JGRC..110.4002G" },
+                      { "bibcode":"2005JGRC..110.4003N" },
+                      { "bibcode":"2005JGRC..110.4004Y" }]}}""")
+
+        # Test 1: Create arXiv daily notification with default get_other_papers=True
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-api-uid': '100'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'arxiv',
+                                              'data': 'dark matter',
+                                              'classes': ['astro-ph.CO'],
+                                              'frequency': 'daily'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['template'], 'arxiv')
+        self.assertEqual(r.json['frequency'], 'daily')
+        self.assertEqual(r.json['get_other_papers'], True)  # Should default to True
+        myads_id_default = r.json['id']
+
+        # Test 2: Create arXiv daily notification with explicit get_other_papers=False
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-api-uid': '100'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'arxiv',
+                                              'data': 'black holes',
+                                              'classes': ['astro-ph.HE'],
+                                              'frequency': 'daily',
+                                              'get_other_papers': False}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['template'], 'arxiv')
+        self.assertEqual(r.json['frequency'], 'daily')
+        self.assertEqual(r.json['get_other_papers'], False)
+        myads_id_false = r.json['id']
+
+        # Test 3: Create arXiv weekly notification (should not include get_other_papers in response)
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-api-uid': '100'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'arxiv',
+                                              'data': 'galaxies',
+                                              'classes': ['astro-ph.GA'],
+                                              'frequency': 'weekly'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['template'], 'arxiv')
+        self.assertEqual(r.json['frequency'], 'weekly')
+        self.assertNotIn('get_other_papers', r.json)  # Should not be included for weekly
+
+        # Test 4: Create non-arxiv template (should not include get_other_papers)
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-api-uid': '100'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'keyword',
+                                              'data': 'machine learning'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['template'], 'keyword')
+        self.assertNotIn('get_other_papers', r.json)  # Should not be included for keyword template
+
+    @httpretty.activate
+    def test_get_other_papers_flag_editing(self):
+        '''Tests editing the get_other_papers flag for arXiv daily notifications'''
+        httpretty.register_uri(
+            httpretty.GET, self.app.config.get('VAULT_SOLR_QUERY_ENDPOINT'),
+            content_type='application/json',
+            status=200,
+            body="""{
+                    "responseHeader":{
+                    "status":0, "QTime":0,
+                    "params":{ "fl":"title,bibcode", "indent":"true", "wt":"json", "q":"*:*"}},
+                    "response":{"numFound":10456930,"start":0,"docs":[
+                      { "bibcode":"2005JGRC..110.4002G" }]}}""")
+
+        # Create an arXiv daily notification
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-api-uid': '101'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'arxiv',
+                                              'data': 'neutron stars',
+                                              'classes': ['astro-ph.HE'],
+                                              'frequency': 'daily'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        myads_id = r.json['id']
+        self.assertEqual(r.json['get_other_papers'], True)  # Default
+
+        # Edit to disable get_other_papers
+        r = self.client.put(url_for('user.myads_notifications', myads_id=myads_id),
+                            headers={'Authorization': 'secret', 'X-api-uid': '101'},
+                            data=json.dumps({'get_other_papers': False}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['get_other_papers'], False)
+
+        # Edit to re-enable get_other_papers
+        r = self.client.put(url_for('user.myads_notifications', myads_id=myads_id),
+                            headers={'Authorization': 'secret', 'X-api-uid': '101'},
+                            data=json.dumps({'get_other_papers': True}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['get_other_papers'], True)
+
+        # Test editing a weekly arXiv notification (should not affect get_other_papers)
+        r = self.client.post(url_for('user.myads_notifications'),
+                             headers={'Authorization': 'secret', 'X-api-uid': '101'},
+                             data=json.dumps({'type': 'template',
+                                              'template': 'arxiv',
+                                              'data': 'cosmology',
+                                              'classes': ['astro-ph.CO'],
+                                              'frequency': 'weekly'}),
+                             content_type='application/json')
+
+        self.assertStatus(r, 200)
+        weekly_myads_id = r.json['id']
+
+        # Try to edit get_other_papers on weekly notification (should be ignored)
+        r = self.client.put(url_for('user.myads_notifications', myads_id=weekly_myads_id),
+                            headers={'Authorization': 'secret', 'X-api-uid': '101'},
+                            data=json.dumps({'get_other_papers': False}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertNotIn('get_other_papers', r.json)  # Should not be included for weekly
+
+    def test_get_other_papers_query_generation(self):
+        '''Tests that _create_myads_query generates correct queries based on get_other_papers flag'''
+        from vault_service.views.user import _create_myads_query
+
+        # Test 1: Daily arXiv with keywords, get_other_papers=True (should create 2 queries)
+        queries = _create_myads_query('arxiv', 'daily', 'dark matter', 
+                                    classes=['astro-ph.CO'], get_other_papers=True)
+        
+        self.assertEqual(len(queries), 2, "Should create 2 queries when get_other_papers=True")
+        
+        # First query: keyword matches
+        self.assertIn('dark matter', queries[0]['q'])
+        self.assertNotIn(' NOT ', queries[0]['q'])
+        self.assertEqual(queries[0]['sort'], 'score desc, date desc')
+        
+        # Second query: other recent papers (NOT keyword matches)
+        self.assertIn('dark matter', queries[1]['q'])
+        self.assertIn(' NOT ', queries[1]['q'])
+        self.assertEqual(queries[1]['sort'], 'date desc')
+
+        # Test 2: Daily arXiv with keywords, get_other_papers=False (should create 1 query)
+        queries = _create_myads_query('arxiv', 'daily', 'dark matter', 
+                                    classes=['astro-ph.CO'], get_other_papers=False)
+        
+        self.assertEqual(len(queries), 1, "Should create 1 query when get_other_papers=False")
+        
+        # Only query: keyword matches
+        self.assertIn('dark matter', queries[0]['q'])
+        self.assertNotIn(' NOT ', queries[0]['q'])
+        self.assertEqual(queries[0]['sort'], 'score desc, date desc')
+
+        # Test 3: Weekly arXiv (get_other_papers should not affect)
+        queries_weekly_true = _create_myads_query('arxiv', 'weekly', 'dark matter', 
+                                                classes=['astro-ph.CO'], get_other_papers=True)
+        queries_weekly_false = _create_myads_query('arxiv', 'weekly', 'dark matter', 
+                                                 classes=['astro-ph.CO'], get_other_papers=False)
+        
+        self.assertEqual(len(queries_weekly_true), 1, "Weekly should always create 1 query")
+        self.assertEqual(len(queries_weekly_false), 1, "Weekly should always create 1 query")
+        self.assertEqual(queries_weekly_true[0]['q'], queries_weekly_false[0]['q'])
+
+        # Test 4: Non-arXiv template (get_other_papers should not affect)
+        queries_keyword = _create_myads_query('keyword', 'weekly', 'machine learning', 
+                                            get_other_papers=False)
+        self.assertEqual(len(queries_keyword), 3, "Keyword template should create 3 queries (recent, trending, useful)")
+
+    def test_get_myads_includes_get_other_papers_flag(self):
+        '''Tests that get_myads endpoint includes get_other_papers flag appropriately'''
+        with self.app.session_scope() as session:
+            # Create test data directly in database
+            user = User(id=102)
+            session.add(user)
+            session.commit()
+            
+            # Daily arXiv notification with get_other_papers=True
+            myads_daily_true = MyADS(
+                user_id=102,
+                type='template',
+                name='Daily True',
+                template='arxiv',
+                frequency='daily',
+                active=True,
+                stateful=False,
+                classes=['astro-ph.CO'],
+                data='dark matter',
+                get_other_papers=True
+            )
+            session.add(myads_daily_true)
+            
+            # Daily arXiv notification with get_other_papers=False
+            myads_daily_false = MyADS(
+                user_id=102,
+                type='template',
+                name='Daily False',
+                template='arxiv',
+                frequency='daily',
+                active=True,
+                stateful=False,
+                classes=['astro-ph.HE'],
+                data='black holes',
+                get_other_papers=False
+            )
+            session.add(myads_daily_false)
+            
+            # Weekly arXiv notification (should not include get_other_papers)
+            myads_weekly = MyADS(
+                user_id=102,
+                type='template',
+                name='Weekly',
+                template='arxiv',
+                frequency='weekly',
+                active=True,
+                stateful=False,
+                classes=['astro-ph.GA'],
+                data='galaxies',
+                get_other_papers=False  # Not relevant for weekly
+            )
+            session.add(myads_weekly)
+            
+            # Keyword notification (should not include get_other_papers)
+            myads_keyword = MyADS(
+                user_id=102,
+                type='template',
+                name='Keyword',
+                template='keyword',
+                frequency='weekly',
+                active=True,
+                stateful=False,
+                data='machine learning',
+                get_other_papers=False  # Not relevant for keyword
+            )
+            session.add(myads_keyword)
+            
+            session.commit()
+
+        # Get all myADS setups for user 102
+        r = self.client.get(url_for('user.get_myads', user_id='102'),
+                            headers={'Authorization': 'secret'})
+
+        self.assertStatus(r, 200)
+        self.assertEqual(len(r.json), 4)
+
+        # # Find each notification and check get_other_papers field
+        daily_true = next(n for n in r.json if n['name'] == 'Daily True')
+        daily_false = next(n for n in r.json if n['name'] == 'Daily False')
+        weekly = next(n for n in r.json if n['name'] == 'Weekly')
+        keyword = next(n for n in r.json if n['name'] == 'Keyword')
+
+        # # Daily arXiv notifications should include get_other_papers
+        self.assertIn('get_other_papers', daily_true)
+        self.assertEqual(daily_true['get_other_papers'], True)
+        
+        self.assertIn('get_other_papers', daily_false)
+        self.assertEqual(daily_false['get_other_papers'], False)
+
+        # # Weekly arXiv and keyword notifications should NOT include get_other_papers
+        self.assertNotIn('get_other_papers', weekly)
+        self.assertNotIn('get_other_papers', keyword)
+
 if __name__ == '__main__':
     unittest.main()
