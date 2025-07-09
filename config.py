@@ -6,7 +6,7 @@ SERVICE_TOKEN = None
 
 VAULT_VERSION = 'v0.1' # Arbitrary string identifying the service (will be returned in the headers)
 
-SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://postgres:postgres@localhost:5432/test_vault"
+SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://vault:newpassword@localhost:5432/vault"
 SQLALCHEMY_ECHO = False
 
 API_ENDPOINT = 'https://api.adsabs.harvard.edu'
