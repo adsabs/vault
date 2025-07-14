@@ -420,15 +420,15 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             # qid is an int in the myADS table
             myads_id = setup.id
             
-            # If user is coming from scixplorer but existing notifications don't have scix_ui set to True, update them
-            if scix_ui_header:
-                # Check if there are any of user's notifications with scix_ui=False
-                existing_notifications = session.query(MyADS).filter_by(user_id=user_id).filter_by(scix_ui=False).all()
-                current_app.logger.info(f'Total notifications to update: {len(existing_notifications)}')
-                if existing_notifications:
-                    for notification in existing_notifications:
-                        current_app.logger.info(f'Updating notification: {notification.id} for user: {user_id}')
-                        notification.scix_ui = True
+            # If scix_ui_header is True or any of the notifications have scix_ui=True, update all notifications to scix_ui=True
+            existing_notifications = session.query(MyADS).filter_by(user_id=user_id).all()
+            notifications_scix_ui_is_false = [notification for notification in existing_notifications if notification.scix_ui == False]
+            if scix_ui_header or (len(notifications_scix_ui_is_false) < len(existing_notifications)):
+                current_app.logger.info(f'Total notifications to update: {len(notifications_scix_ui_is_false)}')
+                
+                for notification in notifications_scix_ui_is_false:
+                    current_app.logger.info(f'Updating notification: {notification.id} for user: {user_id}')
+                    notification.scix_ui = True
             
             session.commit()
         except exc.StatementError as e:
