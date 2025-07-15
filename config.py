@@ -38,7 +38,7 @@ MYADS_DAILY_TIME_RANGE = 2 # days
 MYADS_WEEKLY_TIME_RANGE = 6 # days
 
 # scixplorer host
-SCIXPLORER_HOST = 'scixplorer.org'
+SCIXPLORER_HOSTS = ['scixplorer.org', 'nectar']
 
 # arXiv categories and sub-categories
 ALLOWED_ARXIV_CLASSES = ['astro-ph',
