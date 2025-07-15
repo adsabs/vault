@@ -25,7 +25,6 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
     user_data = Column(MutableDict.as_mutable(JSONB))
-    library_id = Column(Integer, ForeignKey('library.id'), nullable=True)
     created = Column(UTCDateTime, default=get_date)
     updated = Column(UTCDateTime, default=get_date, onupdate=get_date)
 
