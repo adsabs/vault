@@ -294,7 +294,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
     except KeyError:
         return json.dumps({'msg': 'No notification type passed'}), 400
     
-    scix_ui_header = current_app.config['SCIXPLORER_HOST'] in request.headers.get('Host', '')
+    scix_ui_header = any(host in request.headers.get('Host', '') for host in current_app.config['SCIXPLORER_HOSTS'])
 
     with current_app.session_scope() as session:
         try:

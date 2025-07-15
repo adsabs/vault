@@ -959,7 +959,7 @@ class TestServices(TestCaseDatabase):
                 'Authorization': 'secret',
                 'X-api-uid': '42', 
             },
-            environ_overrides={'HTTP_HOST': self.app.config['SCIXPLORER_HOST']}
+            environ_overrides={'HTTP_HOST': self.app.config['SCIXPLORER_HOSTS']}
         )
         self.assertStatus(r, 200)
         self.assertTrue(r.json['name'] == 'Scixplorer Query')
