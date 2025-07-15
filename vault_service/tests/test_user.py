@@ -974,5 +974,36 @@ class TestServices(TestCaseDatabase):
             self.assertTrue(notification2.scix_ui)
             self.assertTrue(notification3.scix_ui)
 
+        # Create a fourth notification WITHOUT Scixplorer Host (query type)
+        r = self.client.post(
+            url_for('user.myads_notifications'),
+            data=json.dumps({
+                'name': 'Scixplorer Query',
+                'qid': qid,
+                'stateful': True,
+                'frequency': 'daily',
+                'type': 'query'
+            }),
+            content_type='application/json',
+            headers={
+                'Authorization': 'secret',
+                'X-api-uid': '42', 
+            }
+        )
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json['name'] == 'Scixplorer Query')
+        fourth_notification_id = r.json['id']
+
+        # Verify ALL notifications now have scix_ui=True
+        with self.app.session_scope() as session:
+            notification1 = session.query(MyADS).filter_by(id=first_notification_id).first()
+            notification2 = session.query(MyADS).filter_by(id=second_notification_id).first()
+            notification3 = session.query(MyADS).filter_by(id=third_notification_id).first()
+            notification4 = session.query(MyADS).filter_by(id=fourth_notification_id).first()
+            self.assertTrue(notification1.scix_ui)
+            self.assertTrue(notification2.scix_ui)
+            self.assertTrue(notification3.scix_ui)
+            self.assertTrue(notification4.scix_ui)
+
 if __name__ == '__main__':
     unittest.main()
