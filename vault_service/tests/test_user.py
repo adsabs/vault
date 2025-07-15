@@ -990,7 +990,7 @@ class TestServices(TestCaseDatabase):
                       { "bibcode":"2005JGRC..110.4003N" },
                       { "bibcode":"2005JGRC..110.4004Y" }]}}""")
 
-        # Test 1: Create arXiv daily notification with default get_other_papers=True
+        # Test 1: Create arXiv daily notification with default get_other_papers=False
         r = self.client.post(url_for('user.myads_notifications'),
                              headers={'Authorization': 'secret', 'X-api-uid': '100'},
                              data=json.dumps({'type': 'template',
@@ -1003,10 +1003,10 @@ class TestServices(TestCaseDatabase):
         self.assertStatus(r, 200)
         self.assertEqual(r.json['template'], 'arxiv')
         self.assertEqual(r.json['frequency'], 'daily')
-        self.assertEqual(r.json['get_other_papers'], True)  # Should default to True
+        self.assertEqual(r.json['get_other_papers'], False)  # Should default to False
         myads_id_default = r.json['id']
 
-        # Test 2: Create arXiv daily notification with explicit get_other_papers=False
+        # Test 2: Create arXiv daily notification with explicit get_other_papers=True
         r = self.client.post(url_for('user.myads_notifications'),
                              headers={'Authorization': 'secret', 'X-api-uid': '100'},
                              data=json.dumps({'type': 'template',
@@ -1014,13 +1014,13 @@ class TestServices(TestCaseDatabase):
                                               'data': 'black holes',
                                               'classes': ['astro-ph.HE'],
                                               'frequency': 'daily',
-                                              'get_other_papers': False}),
+                                              'get_other_papers': True}),
                              content_type='application/json')
 
         self.assertStatus(r, 200)
         self.assertEqual(r.json['template'], 'arxiv')
         self.assertEqual(r.json['frequency'], 'daily')
-        self.assertEqual(r.json['get_other_papers'], False)
+        self.assertEqual(r.json['get_other_papers'], True)
         myads_id_false = r.json['id']
 
         # Test 3: Create arXiv weekly notification (should not include get_other_papers in response)
@@ -1076,7 +1076,16 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         myads_id = r.json['id']
-        self.assertEqual(r.json['get_other_papers'], True)  # Default
+        self.assertEqual(r.json['get_other_papers'], False)  # Default
+
+        # Edit to enable get_other_papers
+        r = self.client.put(url_for('user.myads_notifications', myads_id=myads_id),
+                            headers={'Authorization': 'secret', 'X-api-uid': '101'},
+                            data=json.dumps({'get_other_papers': True}),
+                            content_type='application/json')
+
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['get_other_papers'], True)
 
         # Edit to disable get_other_papers
         r = self.client.put(url_for('user.myads_notifications', myads_id=myads_id),
@@ -1086,15 +1095,6 @@ class TestServices(TestCaseDatabase):
 
         self.assertStatus(r, 200)
         self.assertEqual(r.json['get_other_papers'], False)
-
-        # Edit to re-enable get_other_papers
-        r = self.client.put(url_for('user.myads_notifications', myads_id=myads_id),
-                            headers={'Authorization': 'secret', 'X-api-uid': '101'},
-                            data=json.dumps({'get_other_papers': True}),
-                            content_type='application/json')
-
-        self.assertStatus(r, 200)
-        self.assertEqual(r.json['get_other_papers'], True)
 
         # Test editing a weekly arXiv notification (should not affect get_other_papers)
         r = self.client.post(url_for('user.myads_notifications'),

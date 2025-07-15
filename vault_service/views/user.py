@@ -360,7 +360,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             stateful = False
             frequency = payload.get('frequency', 'daily')
             if frequency == 'daily': 
-                get_other_papers = payload.get('get_other_papers', True)
+                get_other_papers = payload.get('get_other_papers', False)
             if payload.get('data', None):
                 name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
             else:
