@@ -81,7 +81,7 @@ class MyADS(Base):
     name = Column(String)
     active = Column(Boolean)
     scix_ui = Column(Boolean, nullable=True, server_default=sa.text('false'), default=False)
-    get_other_papers = Column(Boolean, nullable=True, server_default=sa.text('false'), default=False)
+    get_other_papers = Column(Boolean, nullable=False, server_default=sa.text('false'), default=False)
     stateful = Column(Boolean)
     frequency = Column(myads_frequency)
     template = Column(myads_template, nullable=True)
