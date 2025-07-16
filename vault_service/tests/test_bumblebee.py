@@ -32,17 +32,12 @@ class TestSite(TestCaseDatabase):
     def test_store_data(self):
         '''Tests the ability to query site config'''
 
+        headers = {'Referer': 'https://dev.scixplorer.org'}
+
         r = self.client.get(url_for('bumblebee.configuration'),
                 content_type='application/json')
         self.assertStatus(r, 200)
         self.assertTrue(r.json == {'foo': 'bar'}, 'missing json response')
-
-        headers = {'Referer': 'https://dev.scixplorer.org'}
-
-        r = self.client.get(url_for('bumblebee.configuration'),
-                content_type='application/json', headers=headers)
-        self.assertStatus(r, 200)
-        self.assertTrue(r.json == {'foo': 'other-bar'}, 'missing json response')
 
         r = self.client.get(url_for('bumblebee.configuration') + '/foo',
                 content_type='application/json')
@@ -51,6 +46,20 @@ class TestSite(TestCaseDatabase):
 
         r = self.client.get(url_for('bumblebee.configuration') + '/foox',
                 content_type='application/json')
+        self.assertStatus(r, 404)
+
+        r = self.client.get(url_for('bumblebee.configuration'),
+                content_type='application/json', headers=headers)
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json == {'foo': 'other-bar'}, 'missing json response')
+
+        r = self.client.get(url_for('bumblebee.configuration') + '/foo',
+                content_type='application/json', headers=headers)
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json == 'other-bar', 'missing json response')
+
+        r = self.client.get(url_for('bumblebee.configuration') + '/foox',
+                content_type='application/json', headers=headers)
         self.assertStatus(r, 404)
 
 class TestOpenURL(TestCaseDatabase):
