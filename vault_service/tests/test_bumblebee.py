@@ -58,6 +58,11 @@ class TestSite(TestCaseDatabase):
         self.assertStatus(r, 200)
         self.assertTrue(r.json == 'other-bar', 'missing json response')
 
+        r = self.client.get(url_for('bumblebee.configuration') + '/foo',
+                content_type='application/json', headers=headers)
+        self.assertStatus(r, 200)
+        self.assertFalse(r.json == 'bar', 'missing json response')
+
         r = self.client.get(url_for('bumblebee.configuration') + '/foox',
                 content_type='application/json', headers=headers)
         self.assertStatus(r, 404)
