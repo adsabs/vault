@@ -32,13 +32,12 @@ MAX_ALLOWED_JSON_KEYS = 100
 # user_id for anonymous users - fix in deployment config
 BOOTSTRAP_USER_ID = 0
 
+NECTAR_REFERRERS = ["dev.scixplorer.org"]
+
 # import endpoints
 HARBOUR_MYADS_IMPORT_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/harbour/myads/classic/%s'
 MYADS_DAILY_TIME_RANGE = 2 # days
 MYADS_WEEKLY_TIME_RANGE = 6 # days
-
-# scixplorer host
-SCIXPLORER_HOST = 'scixplorer.org'
 
 # arXiv categories and sub-categories
 ALLOWED_ARXIV_CLASSES = ['astro-ph',
