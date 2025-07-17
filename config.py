@@ -37,9 +37,6 @@ HARBOUR_MYADS_IMPORT_ENDPOINT = 'https://api.adsabs.harvard.edu/v1/harbour/myads
 MYADS_DAILY_TIME_RANGE = 2 # days
 MYADS_WEEKLY_TIME_RANGE = 6 # days
 
-# scixplorer host
-SCIXPLORER_HOSTS = ['scixplorer.org', 'nectar']
-
 # arXiv categories and sub-categories
 ALLOWED_ARXIV_CLASSES = ['astro-ph',
                          'astro-ph.GA', 'astro-ph.CO', 'astro-ph.EP', 'astro-ph.HE', 'astro-ph.IM', 'astro-ph.SR',
