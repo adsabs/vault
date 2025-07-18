@@ -944,7 +944,7 @@ class TestServices(TestCaseDatabase):
             self.assertFalse(notification1.scix_ui)
             self.assertFalse(notification2.scix_ui)
         
-        # Create a third notification WITH Scixplorer Host (query type)
+        # Create a third notification WITH Scixplorer Referrer (query type)
         r = self.client.post(
             url_for('user.myads_notifications'),
             data=json.dumps({
@@ -957,9 +957,9 @@ class TestServices(TestCaseDatabase):
             content_type='application/json',
             headers={
                 'Authorization': 'secret',
-                'X-api-uid': '42', 
-            },
-            environ_overrides={'HTTP_HOST': self.app.config['SCIXPLORER_HOST']}
+                'X-api-uid': '42',
+                'Referer': 'https://dev.scixplorer.org/search'
+            }
         )
         self.assertStatus(r, 200)
         self.assertTrue(r.json['name'] == 'Scixplorer Query')
