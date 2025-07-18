@@ -5,7 +5,7 @@
 
     Models for the users (users) of AdsWS
 """
-from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey, Boolean, Text
+from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, Boolean, Text
 from sqlalchemy.dialects.postgresql import JSONB, ENUM, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableDict
@@ -25,6 +25,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
     user_data = Column(MutableDict.as_mutable(JSONB))
+    library_id = Column(Integer, ForeignKey('library.id'), nullable=True)
     created = Column(UTCDateTime, default=get_date)
     updated = Column(UTCDateTime, default=get_date, onupdate=get_date)
 
