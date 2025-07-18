@@ -1,8 +1,9 @@
 from flask import Blueprint
-from flask import current_app
+from flask import current_app, request
 from ..models import Library
 from operator import itemgetter
 import json
+import urllib
 
 from flask_discoverer import advertise
 
@@ -12,9 +13,12 @@ bp = Blueprint('bumblebee', __name__)
 @bp.route('/configuration', methods=['GET'])
 @bp.route('/configuration/<key>', methods=['GET'])
 def configuration(key=None):
-    '''Allows you to retrieve JSON data from VAULT_BUMBLEBEE_OPTIONS'''
+    '''Allows you to retrieve JSON data from VAULT_BUMBLEBEE_OPTIONS or VAULT_NECTAR_OPTIONS'''
 
-    opts = current_app.config.get('VAULT_BUMBLEBEE_OPTIONS') or {}
+    if urllib.parse.urlparse(request.referrer).netloc in current_app.config.get("NECTAR_REFERRERS",["dev.scixplorer.org"]):  
+        opts = current_app.config.get('VAULT_NECTAR_OPTIONS') or current_app.config.get('VAULT_BUMBLEBEE_OPTIONS') or {}
+    else:
+        opts = current_app.config.get('VAULT_BUMBLEBEE_OPTIONS') or {}
 
     if not isinstance(opts, dict):
         return json.dumps({'msg': 'Server misconfiguration, VAULT_BUMBLEBEE_OPTIONS is of an invalid type'}), 500
