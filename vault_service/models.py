@@ -5,7 +5,7 @@
 
     Models for the users (users) of AdsWS
 """
-from sqlalchemy import Column, Integer, String, LargeBinary, TIMESTAMP, ForeignKey, Boolean, Text
+from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, Boolean, Text
 from sqlalchemy.dialects.postgresql import JSONB, ENUM, ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableDict
@@ -80,7 +80,7 @@ class MyADS(Base):
     name = Column(String)
     active = Column(Boolean)
     scix_ui = Column(Boolean, nullable=True, server_default=sa.text('false'), default=False)
-    get_other_papers = Column(Boolean, nullable=False, server_default=sa.text('false'), default=False)
+    get_other_papers = Column(Boolean, nullable=False, server_default=sa.text('true'), default=True)
     stateful = Column(Boolean)
     frequency = Column(myads_frequency)
     template = Column(myads_template, nullable=True)
