@@ -10,7 +10,7 @@ project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
-from vault_service.models import Query, User, MyADS
+from vault_service.models import Query, User, MyADS, Library
 from vault_service.tests.base import TestCaseDatabase
 import adsmutils
 
@@ -1004,6 +1004,239 @@ class TestServices(TestCaseDatabase):
             self.assertTrue(notification2.scix_ui)
             self.assertTrue(notification3.scix_ui)
             self.assertTrue(notification4.scix_ui)
+
+    def test_library_integration(self):
+        '''Tests library integration with user data storage'''
+        
+        # First create a library in the test database with a libserver
+        with self.app.session_scope() as session:
+            library = Library(libname='Test Library', libserver='https://resolver.example.com/sfx')
+            library1 = Library(libname='Test Library 2', libserver='https://another.resolver.com/sfx')
+            session.add(library)
+            session.add(library1)
+            session.commit()
+        
+        # Test GET request with no existing user data
+        r = self.client.get(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '10'},
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json, {})
+        
+        # Test POST with link_server - should create library relationship
+        r = self.client.post(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '10'},
+                           data=json.dumps({
+                               'link_server': 'https://resolver.example.com/sfx',
+                               'other_data': 'test'
+                           }),
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertIn('link_server', r.json)
+        self.assertEqual(r.json['link_server'], 'https://resolver.example.com/sfx')
+        self.assertEqual(r.json['other_data'], 'test')
+        
+        # Verify library relationship was created
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=10).first()
+            self.assertIsNotNone(user)
+            self.assertIsNotNone(user.library_id)
+            
+            library = session.query(Library).filter_by(id=user.library_id).first()
+            self.assertIsNotNone(library)
+            self.assertEqual(library.libserver, 'https://resolver.example.com/sfx')
+        
+        # Test GET after library relationship created
+        r = self.client.get(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '10'},
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertIn('link_server', r.json)
+        self.assertEqual(r.json['link_server'], 'https://resolver.example.com/sfx')
+        self.assertEqual(r.json['other_data'], 'test')
+        
+        # Test updating to different library
+        r = self.client.post(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '10'},
+                           data=json.dumps({
+                               'link_server': 'https://another.resolver.com/sfx',
+                               'other_data': 'updated'
+                           }),
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['link_server'], 'https://another.resolver.com/sfx')
+        self.assertEqual(r.json['other_data'], 'updated')
+        
+        # Verify library relationship was updated
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=10).first()
+            self.assertIsNotNone(user)
+            self.assertIsNotNone(user.library_id)
+            
+            library = session.query(Library).filter_by(id=user.library_id).first()
+            self.assertIsNotNone(library)
+            self.assertEqual(library.libserver, 'https://another.resolver.com/sfx')
+        
+        # Test clearing library (empty string)
+        r = self.client.post(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '10'},
+                           data=json.dumps({
+                               'link_server': '',
+                               'other_data': 'still here'
+                           }),
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertNotIn('link_server', r.json)
+        self.assertEqual(r.json['other_data'], 'still here')
+        
+        # Verify library relationship was cleared
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=10).first()
+            self.assertIsNotNone(user)
+            self.assertIsNone(user.library_id)
+        
+        # Test POST without link_server - should not affect library
+        r = self.client.post(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '10'},
+                           data=json.dumps({
+                               'some_setting': 'value'
+                           }),
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['some_setting'], 'value')
+        self.assertEqual(r.json['other_data'], 'still here')
+        self.assertNotIn('link_server', r.json)
+        
+        # Verify library relationship still cleared
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=10).first()
+            self.assertIsNotNone(user)
+            self.assertIsNone(user.library_id)
+
+    def test_library_integration_edge_cases(self):
+        '''Tests edge cases for library integration'''
+        
+        # Test with invalid/non-existent library
+        r = self.client.post(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '11'},
+                           data=json.dumps({
+                               'link_server': 'https://nonexistent.library.com/sfx',
+                               'other_data': 'test'
+                           }),
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        # Should still save other data even if library doesn't exist
+        self.assertEqual(r.json['other_data'], 'test')
+        self.assertNotIn('link_server', r.json)
+        
+        # Verify no library relationship created
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=11).first()
+            self.assertIsNotNone(user)
+            self.assertIsNone(user.library_id)
+        
+        # Test with None value
+        r = self.client.post(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '11'},
+                           data=json.dumps({
+                               'link_server': None,
+                               'other_data': 'test2'
+                           }),
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['other_data'], 'test2')
+        self.assertNotIn('link_server', r.json)
+
+    def test_library_data_migration_logic(self):
+        '''Tests the migration logic for converting link_server to library_id'''
+        
+        # Create a user with old-style link_server in user_data
+        with self.app.session_scope() as session:
+            from vault_service.models import User, Library
+            
+            # Create a library first
+            library = Library(libname='Test Library', libserver='https://test.library.com/sfx')
+            library2 = Library(libname='Test Library 2', libserver='https://test.library.updated.com/sfx')
+            session.add(library)
+            session.add(library2)
+            session.commit()
+            lib_id = library.id
+            lib_id2 = library2.id
+            
+            # Create user with old-style data
+            user = User(id=12, user_data={'link_server': 'https://test.library.com/sfx', 'other': 'data'})
+            session.add(user)
+            session.commit()
+            
+            # Verify initial state
+            self.assertEqual(user.user_data['link_server'], 'https://test.library.com/sfx')
+            self.assertIsNone(user.library_id)
+        
+        # Test GET request 
+        r = self.client.get(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '12'},
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['link_server'], 'https://test.library.com/sfx')
+        self.assertEqual(r.json['other'], 'data')
+        
+        # Get request does not change the data, only the response data
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=12).first()
+            self.assertIsNotNone(user)
+            self.assertEqual(user.library_id, None)
+            self.assertIn('link_server', user.user_data)
+            self.assertEqual(user.user_data['other'], 'data')
+        
+        # Simulate the Alembic migration manually
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=12).first()
+            library = session.query(Library).filter_by(libserver='https://test.library.com/sfx').first()
+            
+            # Migration: set library_id and remove link_server from user_data
+            user.library_id = library.id
+            user_data = user.user_data.copy()
+            user_data.pop('link_server', None)
+            user.user_data = user_data
+            session.commit()
+        
+        # Test GET request after migration - should return new format
+        r = self.client.get(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '12'},
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['link_server'], 'https://test.library.com/sfx')
+        self.assertEqual(r.json['other'], 'data')
+        
+        # Verify migration occurred in database
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=12).first()
+            self.assertIsNotNone(user)
+            self.assertEqual(user.library_id, lib_id)
+            self.assertNotIn('link_server', user.user_data)
+            self.assertEqual(user.user_data['other'], 'data')
+        
+        # Test POST request - should update library data
+        r = self.client.post(url_for('user.store_data'),
+                           headers={'Authorization': 'secret', 'X-api-uid': '12'},
+                           data=json.dumps({
+                               'new_setting': 'value', 
+                               'link_server': 'https://test.library.updated.com/sfx'
+                           }),
+                           content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertEqual(r.json['link_server'], 'https://test.library.updated.com/sfx')
+        self.assertEqual(r.json['other'], 'data')
+        self.assertEqual(r.json['new_setting'], 'value')
+
+        # Verify POST didn't affect migration - data should remain in new format
+        with self.app.session_scope() as session:
+            user = session.query(User).filter_by(id=12).first()
+            self.assertIsNotNone(user)
+            self.assertEqual(user.library_id, lib_id2)
+            self.assertNotIn('link_server', user.user_data)
+            self.assertEqual(user.user_data['other'], 'data')
+            self.assertEqual(user.user_data['new_setting'], 'value')
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,7 +9,7 @@ import datetime
 
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
-from ..models import Query, User, MyADS
+from ..models import Query, User, MyADS, Library
 from .utils import check_request, cleanup_payload, make_solr_request, upsert_myads, get_keyword_query_name
 from flask_discoverer import advertise
 from dateutil import parser
@@ -158,11 +158,21 @@ def store_data():
 
     if request.method == 'GET':
         with current_app.session_scope() as session:
-            q = session.query(User).filter_by(id=user_id).first()
-            if not q:
-                return '{}', 200 # or return 404?
-            return json.dumps(q.user_data) or '{}', 200
+            user = session.query(User).filter_by(id=user_id).first()
+            if not user:
+                return '{}', 200
+            response_data = user.user_data.copy() if user.user_data else {}
+            if user.library_id:
+                library = session.query(Library).filter_by(id=user.library_id).first()
+                if library:
+                    response_data['link_server'] = library.libserver
+            return json.dumps(response_data) or '{}', 200
     elif request.method == 'POST':
+        # Remove link_server from payload if present
+        library_server = payload.pop('link_server', None)
+        library = None
+
+
         # limit both number of keys and length of value to keep db clean
         if len(max(list(payload.values()), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
             return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
@@ -170,39 +180,39 @@ def store_data():
             return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
 
         with current_app.session_scope() as session:
-            try:
-                q = session.query(User).filter_by(id=user_id).with_for_update(of=User).one()
+            user = session.query(User).filter_by(id=user_id).with_for_update(of=User).first()
+            if not user:
+                data = payload.copy()
+                user = User(id=user_id, user_data=data)
+                session.add(user)
+            else:
                 try:
-                    data = q.user_data
+                    data = user.user_data or {}
                 except TypeError:
                     data = {}
-            except ormexc.NoResultFound:
-                data = payload
-                u = User(id=user_id, user_data=data)
-                try:
-                    session.add(u)
-                    session.commit()
-                    return json.dumps(data), 200
-                except exc.IntegrityError:
-                    q = session.query(User).filter_by(id=user_id).with_for_update(of=User).one()
-                    try:
-                        data = q.user_data
-                    except TypeError:
-                        data = {}
+                data.update(payload)
+                user.user_data = data
 
-            if data is None:
-                data = {}
-            data.update(payload)
-            q.user_data = data
+            # Handle library selection (set or clear)
+            if library_server is not None:
+                if library_server:
+                    library = session.query(Library).filter_by(libserver=library_server).first()
+                    user.library_id = library.id if library else None
+                else:
+                    user.library_id = None
 
             session.begin_nested()
             try:
                 session.commit()
+                # Prepare response data (do not mutate user.user_data in-place)
+                response_data = data.copy()
+                if user.library_id and library:
+                    response_data['link_server'] = library.libserver
             except exc.IntegrityError:
                 session.rollback()
                 return json.dumps({'msg': 'We have hit a db error! The world is crumbling all around... (eh, btw, your data was not saved)'}), 500
 
-        return json.dumps(data), 200
+        return json.dumps(response_data), 200
 
 
 @advertise(scopes=[], rate_limit=[1000, 3600*24])
