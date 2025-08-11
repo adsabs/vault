@@ -36,13 +36,14 @@ def upgrade():
     for user_id, user_data in users: 
         if user_data and isinstance(user_data, dict): 
             link_server = user_data.get('link_server')
-            if link_server: 
-                library_result = bind.execute(
-                    "SELECT id FROM library WHERE libserver = %(libserver)s", 
-                    {"libserver": link_server}
-                ).fetchone()
-
-                library_id = library_result[0] if library_result else None
+            if link_server is not None:  # Process both empty strings and non-empty values
+                library_id = None
+                if link_server:  # Only look up library if link_server is not empty
+                    library_result = bind.execute(
+                        "SELECT id FROM library WHERE libserver = %(libserver)s", 
+                        {"libserver": link_server}
+                    ).fetchone()
+                    library_id = library_result[0] if library_result else None
 
                 new_user_data = user_data.copy()
                 new_user_data.pop('link_server', None)
