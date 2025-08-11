@@ -1,14 +1,14 @@
 """Add get_other_papers flag to myads table
 
 Revision ID: 717c2970ff42
-Revises: 4cc89f2f896b
+Revises: af63c0205b19
 Create Date: 2025-07-15 16:14:53.689180
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '717c2970ff42'
-down_revision = '4cc89f2f896b'
+down_revision = 'af63c0205b19'
 
 from alembic import op
 import sqlalchemy as sa
