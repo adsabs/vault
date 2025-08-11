@@ -78,7 +78,7 @@ def downgrade():
                 }
             )
     
-    # Find and drop the foreign key constraint dynamically
+    # Find and drop the actual foreign key constraint
     bind = op.get_bind()
     result = bind.execute("""
         SELECT constraint_name 
@@ -90,8 +90,5 @@ def downgrade():
     if result:
         constraint_name = result[0]
         op.drop_constraint(constraint_name, 'users', type_='foreignkey')
-    else:
-        # If no constraint found, just drop the column (PostgreSQL will handle it)
-        pass
     op.drop_column('users', 'library_id')
     # ### end Alembic commands ###
