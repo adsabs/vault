@@ -1,12 +1,14 @@
 """Adding library_id foreign key to user
+
 Revision ID: af63c0205b19
-Revises: dcda14f51cff
+Revises: 4cc89f2f896b
 Create Date: 2025-07-09 15:00:40.189587
 """
 
 # revision identifiers, used by Alembic.
 revision = 'af63c0205b19'
-down_revision = 'dcda14f51cff'
+down_revision = '4cc89f2f896b'
+
 
 from alembic import op
 import sqlalchemy as sa
@@ -29,7 +31,6 @@ def upgrade():
     # Get all users with link_server in user_data 
     # Delete link_server from user_data 
     # But save the link_server in the library table instead to be accessible via users.library_id
-
 
     users = bind.execute("SELECT id, user_data FROM users WHERE user_data ? 'link_server'")
 

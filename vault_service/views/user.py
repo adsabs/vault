@@ -305,6 +305,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
         return json.dumps({'msg': 'No notification type passed'}), 400
     
     scix_ui_header = urlparse.urlparse(request.referrer).netloc in current_app.config.get("NECTAR_REFERRERS", ["dev.scixplorer.org"])
+    get_other_papers = True
 
     with current_app.session_scope() as session:
         try:
@@ -368,6 +369,8 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
             data = payload.get('data', None)
             stateful = False
             frequency = payload.get('frequency', 'daily')
+            if frequency == 'daily': 
+                get_other_papers = payload.get('get_other_papers', True)
             if payload.get('data', None):
                 name = '{0} - Recent Papers'.format(get_keyword_query_name(payload['data']))
             else:
@@ -405,6 +408,7 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                       template=template,
                       classes=classes,
                       scix_ui=scix_ui_header,
+                      get_other_papers=get_other_papers,
                       data=data)
     else:
         return json.dumps({'msg': 'Bad data passed; type must be query or template'}), 400
@@ -447,6 +451,9 @@ def _create_myads_notification(payload=None, headers=None, user_id=None):
                   'data': setup.data,
                   'created': setup.created.isoformat(),
                   'updated': setup.updated.isoformat()}
+        # Only include get_other_papers for daily arXiv notifications
+        if setup.template == 'arxiv' and setup.frequency == 'daily':
+            output['get_other_papers'] = setup.get_other_papers
 
     return json.dumps(output), 200
 
@@ -556,6 +563,10 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
         setup.stateful = payload.get('stateful', setup.stateful)
         setup.frequency = payload.get('frequency', setup.frequency)
 
+        # Only update get_other_papers for daily arXiv notifications and if the payload has a value
+        if setup.template == 'arxiv' and setup.frequency == 'daily' and payload.get('get_other_papers', None) is not None:
+            setup.get_other_papers = payload.get('get_other_papers')
+
         try:
             session.begin_nested()
         except exc.StatementError as e:
@@ -583,6 +594,10 @@ def _edit_myads_notification(payload=None, headers=None, user_id=None, myads_id=
                   'data': setup.data,
                   'created': setup.created.isoformat(),
                   'updated': setup.updated.isoformat()}
+        
+        # Only include get_other_papers for daily arXiv notifications
+        if setup.template == 'arxiv' and setup.frequency == 'daily':
+            output['get_other_papers'] = setup.get_other_papers
 
     return json.dumps(output), 200
 
@@ -616,7 +631,7 @@ def execute_myads_query(myads_id):
         data = setup.data
         if data is None and setup.query_id:
             data = _get_general_query_data(session, setup.query_id)
-        query = _create_myads_query(setup.template, setup.frequency, data, classes=setup.classes)
+        query = _create_myads_query(setup.template, setup.frequency, data, classes=setup.classes, get_other_papers=setup.get_other_papers)
 
     return json.dumps(query)
 
@@ -636,12 +651,13 @@ def _get_general_query_data(session, query_id):
             data = urlparse.parse_qs(query)
     return data
 
-def _create_myads_query(template_type, frequency, data, classes=None, start_isodate=None):
+def _create_myads_query(template_type, frequency, data, classes=None, start_isodate=None, get_other_papers=True):
     """
     Creates a query based on the stored myADS setup (for templated queries only)
     :param frequency: daily or weekly
     :param data: keywords or other stored query template data
     :param classes: arXiv classes, only required for arXiv template queries
+    :param get_other_papers: for arXiv daily queries, whether to include "other recent papers" query
     :return: out: list of dicts; constructed query, dates are such that it's meant to be run today:
                     [{q: query params,
                      sort: sort string}]
@@ -678,9 +694,14 @@ def _create_myads_query(template_type, frequency, data, classes=None, start_isod
         classes = 'arxiv_class:(' + ' OR '.join([x + '.*' if '.' not in x else x for x in tmp]) + ')'
         keywords = data
         if frequency == 'daily':
-            connector = [' ', ' NOT ']
-            # keyword search should be sorted by score, "other recent" should be sorted by bibcode
-            sort_w_keywords = ['score desc, date desc', 'date desc']
+            if get_other_papers:
+                connector = [' ', ' NOT ']
+                # keyword search should be sorted by score, "other recent" should be sorted by bibcode
+                sort_w_keywords = ['score desc, date desc', 'date desc']
+            else:
+                # Only include keyword matches, skip "other recent papers"
+                connector = [' ']
+                sort_w_keywords = ['score desc, date desc']
         elif frequency == 'weekly':
             connector = [' ']
             sort_w_keywords = ['score desc, date desc']
@@ -791,14 +812,17 @@ def get_myads(user_id, start_isodate=None):
                     query = None
                 else:
                     data = _get_general_query_data(session, s.query_id)
-                    query = _create_myads_query(s.template, s.frequency, data, classes=s.classes, start_isodate=start_isodate)
+                    query = _create_myads_query(s.template, s.frequency, data, classes=s.classes, start_isodate=start_isodate, get_other_papers=s.get_other_papers)
             else:
                 qid = None
                 data = s.data
-                query = _create_myads_query(s.template, s.frequency, data, classes=s.classes, start_isodate=start_isodate)
+                if s.template == 'arxiv' and s.frequency == 'daily':
+                    o['get_other_papers'] = s.get_other_papers
+                query = _create_myads_query(s.template, s.frequency, data, classes=s.classes, start_isodate=start_isodate, get_other_papers=s.get_other_papers)
 
             o['qid'] = qid
             o['query'] = query
+            
 
             output.append(o)
 
