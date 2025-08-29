@@ -172,12 +172,12 @@ def store_data():
         library_server = payload.pop('link_server', None)
         library = None
 
-
-        # limit both number of keys and length of value to keep db clean
-        if len(max(list(payload.values()), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
-            return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
-        if len(list(payload.keys())) > current_app.config['MAX_ALLOWED_JSON_KEYS']:
-            return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
+        if payload.values(): 
+            # limit both number of keys and length of value to keep db clean
+            if len(max(list(payload.values()), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
+                return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
+            if len(list(payload.keys())) > current_app.config['MAX_ALLOWED_JSON_KEYS']:
+                return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
 
         with current_app.session_scope() as session:
             user = session.query(User).filter_by(id=user_id).with_for_update(of=User).first()
