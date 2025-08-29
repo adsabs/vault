@@ -163,11 +163,13 @@ def store_data():
                 return '{}', 200 # or return 404?
             return json.dumps(q.user_data) or '{}', 200
     elif request.method == 'POST':
-        # limit both number of keys and length of value to keep db clean
-        if len(max(list(payload.values()), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
-            return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
-        if len(list(payload.keys())) > current_app.config['MAX_ALLOWED_JSON_KEYS']:
-            return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
+
+        if payload.values(): 
+            # limit both number of keys and length of value to keep db clean
+            if len(max(list(payload.values()), key=len)) > current_app.config['MAX_ALLOWED_JSON_SIZE']:
+                return json.dumps({'msg': 'You have exceeded the allowed storage limit (length of values), no data was saved'}), 400
+            if len(list(payload.keys())) > current_app.config['MAX_ALLOWED_JSON_KEYS']:
+                return json.dumps({'msg': 'You have exceeded the allowed storage limit (number of keys), no data was saved'}), 400
 
         with current_app.session_scope() as session:
             try:
