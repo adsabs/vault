@@ -229,7 +229,7 @@ def myads_notifications(myads_id=None):
     except Exception as e:
         return json.dumps({'msg': e.message or e.description}), 400
 
-    user_id = int(headers['X-api-uid'])
+    user_id = int(headers['X-Api-Uid'])
 
     if user_id == current_app.config['BOOTSTRAP_USER_ID']:
         return json.dumps({'msg': 'Sorry, you can\'t use this service as an anonymous user'}), 400
