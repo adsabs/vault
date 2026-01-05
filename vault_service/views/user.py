@@ -215,7 +215,7 @@ def store_data():
         return json.dumps(response_data), 200
 
 
-@advertise(scopes=[], rate_limit=[1000, 3600*24])
+@advertise(scopes=['store-preferences'], rate_limit=[1000, 3600*24])
 @bp.route('/notifications', methods=['GET', 'POST'])
 @bp.route('/notifications/<myads_id>', methods=['GET', 'PUT', 'DELETE'])
 def myads_notifications(myads_id=None):
