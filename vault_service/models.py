@@ -7,7 +7,7 @@
 """
 from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, Boolean, Text
 from sqlalchemy.dialects.postgresql import JSONB, ENUM, ARRAY
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.ext.mutable import MutableDict
 from adsmutils import UTCDateTime, get_date
 import sqlalchemy as sa

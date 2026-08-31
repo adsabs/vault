@@ -4,7 +4,6 @@ from flask import url_for, request
 import unittest
 import json
 import httpretty
-import cgi
 from io import StringIO
 
 project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))

@@ -9,7 +9,6 @@ from flask import url_for, request
 import unittest
 import json
 import httpretty
-import cgi
 from io import StringIO
 from vault_service.tests.base import TestCaseDatabase
 
