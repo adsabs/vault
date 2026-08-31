@@ -1,2 +1,2 @@
 [run]
-omit = vault_service/tests*
+omit = */vault_service/tests/*

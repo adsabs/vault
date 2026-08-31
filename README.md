@@ -14,13 +14,22 @@ Microservice for storing queries, user preferences and stuff
      create database vault;
      alter database vault owner to vault;
 
-  * create modified vault_service/local_config.py, update (at least)
+  * create local_config.py at the repo root (next to config.py), update (at least)
   	VAULT_OAUTH_CLIENT_TOKEN = '.......'
     SQLALCHEMY_DATABASE_URI = "....."
 
   * run `alembic upgrade head`
 
-  	* note: you need alembic and all dependencies in your python (`virtualenv python; pip install -r requirements; source python/bin/activate`)
+  	* note: you need alembic and all dependencies in your python
+
+```bash
+python3.12 -m venv python
+source python/bin/activate
+pip install -e ".[dev]"
+
+# run the tests
+pytest
+```
 
 
 
