@@ -14,7 +14,6 @@ from alembic import op
 import sqlalchemy as sa
 import json
                                
-from sqlalchemy.dialects import postgresql
 
 def upgrade():
     #with app.app_context() as c:
@@ -31,7 +30,7 @@ def upgrade():
     # Delete link_server from user_data 
     # But save the link_server in the library table instead to be accessible via users.library_id
     
-    users = bind.execute("SELECT id, user_data FROM users WHERE user_data ? 'link_server'")
+    users = bind.execute(sa.text("SELECT id, user_data FROM users WHERE user_data ? 'link_server'"))
 
     for user_id, user_data in users: 
         if user_data and isinstance(user_data, dict): 
@@ -40,7 +39,7 @@ def upgrade():
                 library_id = None
                 if link_server:  # Only look up library if link_server is not empty
                     library_result = bind.execute(
-                        "SELECT id FROM library WHERE libserver = %(libserver)s", 
+                        sa.text("SELECT id FROM library WHERE libserver = :libserver"),
                         {"libserver": link_server}
                     ).fetchone()
                     library_id = library_result[0] if library_result else None
@@ -50,7 +49,7 @@ def upgrade():
 
                 # Convert dictionary to JSON string for PostgreSQL
                 bind.execute(
-                    "UPDATE users SET user_data = %(user_data)s, library_id = %(library_id)s WHERE id = %(user_id)s",
+                    sa.text("UPDATE users SET user_data = :user_data, library_id = :library_id WHERE id = :user_id"),
                     {
                         "user_data": json.dumps(new_user_data),
                         "library_id": library_id, 
@@ -63,7 +62,7 @@ def downgrade():
 
     bind = op.get_bind()
 
-    result = bind.execute("SELECT u.id, u.user_data, l.libserver FROM users u JOIN library l ON u.library_id = l.id WHERE u.library_id IS NOT NULL")
+    result = bind.execute(sa.text("SELECT u.id, u.user_data, l.libserver FROM users u JOIN library l ON u.library_id = l.id WHERE u.library_id IS NOT NULL"))
     
     for user_id, user_data, libserver in result: 
         user_data = user_data or {}
@@ -71,7 +70,7 @@ def downgrade():
             if libserver is not None: 
                 user_data['link_server'] = libserver
             bind.execute(
-                "UPDATE users SET user_data = %(user_data)s WHERE id = %(user_id)s", 
+                sa.text("UPDATE users SET user_data = :user_data WHERE id = :user_id"),
                 {
                     "user_data": json.dumps(user_data), 
                     "user_id": user_id
@@ -80,12 +79,12 @@ def downgrade():
     
     # Find and drop the actual foreign key constraint
     bind = op.get_bind()
-    result = bind.execute("""
+    result = bind.execute(sa.text("""
         SELECT constraint_name 
         FROM information_schema.table_constraints 
         WHERE table_name = 'users' 
         AND constraint_type = 'FOREIGN KEY'
-    """).fetchone()
+    """)).fetchone()
     
     if result:
         constraint_name = result[0]

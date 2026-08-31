@@ -1,4 +1,3 @@
-import logging.config
 
 from werkzeug.serving import run_simple
 import os, sys, inspect
@@ -26,7 +25,7 @@ def create_app(**config):
     ## http://docs.sqlalchemy.org/en/rel_0_9/dialects/sqlite.html#pysqlite-serializable
 
     if 'sqlite' in app.config.get('SQLALCHEMY_DATABASE_URI', None):
-        from sqlalchemy import event
+        from sqlalchemy import event, text
         engine = app.db.engine
 
         @event.listens_for(engine, "connect")
@@ -38,7 +37,7 @@ def create_app(**config):
         @event.listens_for(engine, "begin")
         def do_begin(conn):
             # emit our own BEGIN
-            conn.execute("BEGIN")
+            conn.execute(text("BEGIN"))
 
 
     # Note about imports being here rather than at the top level

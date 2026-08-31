@@ -1,15 +1,13 @@
 import sys, os
-from urllib.parse import urlencode
-from flask import url_for, request
+from flask import url_for
 import unittest
-import json
 
 project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
 from vault_service import app
-from vault_service.models import Query, Institute, Library, Base
+from vault_service.models import Institute, Library, Base
 from vault_service.tests.base import TestCaseDatabase
 
 class TestSite(TestCaseDatabase):
