@@ -9,7 +9,6 @@ from ..models import User, MyADS
 
 from sqlalchemy import exc
 from sqlalchemy.orm import exc as ormexc
-from sqlalchemy.sql.expression import all_
 
 
 def make_solr_request(query, bigquery=None, headers=None):

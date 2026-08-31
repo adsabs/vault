@@ -1,4 +1,3 @@
-import logging.config
 
 from werkzeug.serving import run_simple
 import os, sys, inspect

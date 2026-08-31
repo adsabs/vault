@@ -14,7 +14,6 @@ from alembic import op
 import sqlalchemy as sa
 import json
                                
-from sqlalchemy.dialects import postgresql
 
 def upgrade():
     #with app.app_context() as c:

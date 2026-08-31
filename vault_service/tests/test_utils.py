@@ -1,19 +1,16 @@
 import sys, os
-from urllib.parse import urlencode
-from flask import url_for, request
+from flask import url_for
 import unittest
 import json
 import httpretty
-from io import StringIO
 
 project_home = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
 
-from vault_service.models import Query, User, MyADS
+from vault_service.models import MyADS
 from vault_service.views import utils
 from vault_service.tests.base import TestCaseDatabase
-import adsmutils
 
 
 class TestServices(TestCaseDatabase):
