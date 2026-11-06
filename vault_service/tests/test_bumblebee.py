@@ -67,6 +67,41 @@ class TestSite(TestCaseDatabase):
                 content_type='application/json', headers=headers)
         self.assertStatus(r, 404)
 
+class TestSiteJSONSiteWideMessage(TestCaseDatabase):
+    '''Tests that each route is an http response'''
+
+    def create_app(self):
+        '''Start the wsgi application'''
+        a = app.create_app(**{
+               'SQLALCHEMY_DATABASE_URI': self.postgresql_url,
+               'SQLALCHEMY_ECHO': True,
+               'TESTING': True,
+               'PROPAGATE_EXCEPTIONS': True,
+               'TRAP_BAD_REQUEST_ERRORS': True,
+               'VAULT_BUMBLEBEE_OPTIONS': {"msg": "This is a message","dismissable":False,"bgColor": "#e4a6a7"},
+               'VAULT_NECTAR_OPTIONS': {'foo': 'other-bar'}
+            })
+        return a
+
+    def test_store_data(self):
+        '''Tests the ability to query site config'''
+
+        headers = {'Referer': 'https://dev.adsabs.harvard.edu'}
+
+        r = self.client.get(url_for('bumblebee.configuration'),
+                content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json == {"msg": "This is a message","dismissable":False,"bgColor": "#e4a6a7"}, 'missing json response')
+
+        r = self.client.get(url_for('bumblebee.configuration') + '/site_wide_message',
+                content_type='application/json')
+        self.assertStatus(r, 200)
+        self.assertTrue(r.json == {"msg": "This is a message","dismissable":False,"bgColor": "#e4a6a7"}, 'missing json response')
+
+        r = self.client.get(url_for('bumblebee.configuration') + '/foox',
+                content_type='application/json')
+        self.assertStatus(r, 404)
+
 class TestOpenURL(TestCaseDatabase):
     '''Tests that each route is an http response'''
 
