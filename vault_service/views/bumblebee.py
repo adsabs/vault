@@ -32,6 +32,8 @@ def configuration(key=None):
                 return json.dumps(link_servers), 200
         elif key in opts:
             return json.dumps(opts[key]), 200
+        elif key == 'site_wide_message' and 'msg' in opts:
+            return json.dumps(opts), 200
         else:
             return '{}', 404
     else:
